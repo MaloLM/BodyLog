@@ -1,5 +1,5 @@
 {
-  "name": "AnatomyNode 3D",
+  "name": "BodyLog",
   "description": "A sophisticated 3D anatomical viewer for clinical documentation, featuring temporality-based marker tracking, dual-pane synchronization, and male/female anatomical models.",
   "requestFramePermissions": []
 }

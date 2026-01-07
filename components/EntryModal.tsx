@@ -5,22 +5,33 @@ import { X, Camera, Save, Clock } from 'lucide-react';
 interface EntryModalProps {
   isOpen: boolean;
   isNewMarker: boolean;
+  initialTitle?: string;
+  initialDescription?: string;
+  initialImage?: string;
   onClose: () => void;
   onSave: (title: string, description: string, image?: string) => void;
 }
 
-export const EntryModal: React.FC<EntryModalProps> = ({ isOpen, isNewMarker, onClose, onSave }) => {
-  const [title, setTitle] = useState('');
-  const [description, setDescription] = useState('');
-  const [image, setImage] = useState<string | undefined>();
-  
+export const EntryModal: React.FC<EntryModalProps> = ({
+  isOpen,
+  isNewMarker,
+  initialTitle = "",
+  initialDescription = "",
+  initialImage,
+  onClose,
+  onSave,
+}) => {
+  const [title, setTitle] = useState(initialTitle);
+  const [description, setDescription] = useState(initialDescription);
+  const [image, setImage] = useState<string | undefined>(initialImage);
+
   useEffect(() => {
     if (isOpen) {
-      setTitle('');
-      setDescription('');
-      setImage(undefined);
+      setTitle(initialTitle);
+      setDescription(initialDescription);
+      setImage(initialImage);
     }
-  }, [isOpen]);
+  }, [isOpen, initialTitle, initialDescription, initialImage]);
 
   if (!isOpen) return null;
 
@@ -43,13 +54,23 @@ export const EntryModal: React.FC<EntryModalProps> = ({ isOpen, isNewMarker, onC
   };
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-      <div className="bg-slate-900 border border-slate-700 w-full max-w-lg rounded-2xl shadow-2xl overflow-hidden animate-in zoom-in duration-200">
+    <div 
+      className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
+      onClick={onClose}
+    >
+      <div 
+        className="bg-slate-900 border border-slate-700 w-full max-w-lg rounded-2xl shadow-2xl overflow-hidden animate-in zoom-in duration-200"
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="p-6 border-b border-slate-800 flex justify-between items-center bg-slate-800/20">
           <div>
             <h3 className="text-xl font-bold text-white flex items-center gap-2">
               <Clock size={20} className="text-blue-500" />
-              {isNewMarker ? 'Capture New Marker' : 'New Timeline Entry'}
+              {isNewMarker
+                ? "Capture New Marker"
+                : initialDescription
+                ? "Edit Entry"
+                : "New Timeline Entry"}
             </h3>
             <p className="text-slate-400 text-xs mt-0.5">Automated timestamp: {new Date().toLocaleDateString()}</p>
           </div>
@@ -91,10 +112,25 @@ export const EntryModal: React.FC<EntryModalProps> = ({ isOpen, isNewMarker, onC
               <label className="flex-1 flex flex-col items-center justify-center border-2 border-dashed border-slate-700 rounded-xl p-6 hover:border-slate-500 cursor-pointer transition-all bg-slate-800/50 group">
                 <input type="file" accept="image/*" onChange={handleImageChange} className="hidden" />
                 {image ? (
-                  <div className="relative w-full">
-                    <img src={image} className="w-full h-32 object-contain rounded-lg" />
-                    <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity rounded-lg">
+                  <div className="relative w-full group/img">
+                    <img
+                      src={image}
+                      className="w-full h-32 object-contain rounded-lg"
+                    />
+                    <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover/img:opacity-100 transition-opacity rounded-lg gap-4">
                       <Camera className="text-white" size={24} />
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          setImage(undefined);
+                        }}
+                        className="bg-red-500 p-2 rounded-full text-white hover:bg-red-600 transition-colors"
+                        title="Remove image"
+                      >
+                        <X size={16} />
+                      </button>
                     </div>
                   </div>
                 ) : (
