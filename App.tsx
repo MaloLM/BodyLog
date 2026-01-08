@@ -3,6 +3,7 @@ import { Viewer3D } from "./components/Viewer3D";
 import { Sidebar } from "./components/Sidebar";
 import { EntryModal } from "./components/EntryModal";
 import { HelpModal } from "./components/HelpModal";
+import { WelcomeModal } from "./components/WelcomeModal";
 import { Marker, Gender, Entry } from "./types";
 import {
   Activity,
@@ -33,6 +34,10 @@ const App: React.FC = () => {
   });
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isHelpOpen, setIsHelpOpen] = useState(false);
+  const [isWelcomeOpen, setIsWelcomeOpen] = useState(() => {
+    const hasVisited = localStorage.getItem("bodylog_visited");
+    return !hasVisited;
+  });
   const [isLightboxOpen, setIsLightboxOpen] = useState(false);
   const [pendingMarkerPos, setPendingMarkerPos] = useState<
     [number, number, number] | null
@@ -50,6 +55,11 @@ const App: React.FC = () => {
   const handlePointClick = useCallback((position: [number, number, number]) => {
     setPendingMarkerPos(position);
     setIsModalOpen(true);
+  }, []);
+
+  const handleCloseWelcome = useCallback(() => {
+    setIsWelcomeOpen(false);
+    localStorage.setItem("bodylog_visited", "true");
   }, []);
 
   const handleSaveMarker = useCallback(
@@ -222,7 +232,9 @@ const App: React.FC = () => {
           selectedMarkerId={selectedMarkerId}
           onPointClick={handlePointClick}
           onMarkerSelect={setSelectedMarkerId}
-          isModalOpen={isModalOpen || isHelpOpen || isLightboxOpen}
+          isModalOpen={
+            isModalOpen || isHelpOpen || isWelcomeOpen || isLightboxOpen
+          }
         />
       </div>
 
@@ -269,6 +281,9 @@ const App: React.FC = () => {
 
       {/* Help Modal */}
       <HelpModal isOpen={isHelpOpen} onClose={() => setIsHelpOpen(false)} />
+
+      {/* Welcome Modal */}
+      <WelcomeModal isOpen={isWelcomeOpen} onClose={handleCloseWelcome} />
     </div>
   );
 };
