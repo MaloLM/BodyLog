@@ -10,9 +10,13 @@ import {
   Edit2,
   Download,
   Upload,
+  Copy,
+  ArrowUpDown,
+  FileText,
 } from "lucide-react";
 import { ImageLightbox } from "./ImageLightbox";
 import { ConfirmModal } from "./ConfirmModal";
+import { StatsBar } from "./StatsBar";
 
 import { Entry, Marker } from "../types";
 
@@ -27,6 +31,9 @@ interface SidebarProps {
   onLightboxToggle?: (isOpen: boolean) => void;
   onExport: () => void;
   onImport: () => void;
+  onExportPDF: () => void;
+  onRenameMarker: (markerId: string, newTitle: string) => void;
+  onDuplicateMarker: (markerId: string) => void;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
@@ -40,9 +47,15 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onLightboxToggle,
   onExport,
   onImport,
+  onExportPDF,
+  onRenameMarker,
+  onDuplicateMarker,
 }) => {
   const [lightboxIndex, setLightboxIndex] = useState(-1);
   const [searchQuery, setSearchQuery] = useState("");
+  const [sortBy, setSortBy] = useState<'recent' | 'alpha' | 'entries'>('recent');
+  const [editingTitle, setEditingTitle] = useState<string | null>(null);
+  const [editingTitleValue, setEditingTitleValue] = useState("");
   const [confirmConfig, setConfirmConfig] = useState<{
     isOpen: boolean;
     title: string;
@@ -56,14 +69,24 @@ export const Sidebar: React.FC<SidebarProps> = ({
   });
 
   const filteredMarkers = useMemo(() => {
-    if (!searchQuery.trim()) return markers;
-    const query = searchQuery.toLowerCase();
-    return markers.filter(
-      (m) =>
-        m.title.toLowerCase().includes(query) ||
-        m.entries.some((e) => e.description.toLowerCase().includes(query))
-    );
-  }, [markers, searchQuery]);
+    let result = markers;
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      result = result.filter(
+        (m) =>
+          m.title.toLowerCase().includes(query) ||
+          m.entries.some((e) => e.description.toLowerCase().includes(query))
+      );
+    }
+    if (sortBy === 'alpha') {
+      result = [...result].sort((a, b) => a.title.localeCompare(b.title));
+    } else if (sortBy === 'entries') {
+      result = [...result].sort((a, b) => b.entries.length - a.entries.length);
+    } else {
+      result = [...result].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    }
+    return result;
+  }, [markers, searchQuery, sortBy]);
 
   const timelineEntries = useMemo(() => {
     if (!selectedMarker) return [];
@@ -87,16 +110,16 @@ export const Sidebar: React.FC<SidebarProps> = ({
   return (
     <div className="flex flex-col h-full">
       <div className="p-6 border-b border-slate-800">
-        <div className="flex items-start justify-between">
-          <div>
+        <div className="flex items-center justify-between gap-3">
+          <div className="min-w-0">
             <h2 className="text-xl font-bold text-white flex items-center gap-2">
               {selectedMarker ? <History className="text-blue-500" /> : <></>}
-              {selectedMarker ? "Marker Timeline" : "Anatomy Overview"}
+              {selectedMarker ? "Chronologie" : "Vue d'ensemble"}
             </h2>
-            <p className="text-slate-400 text-sm mt-1">
+            <p className="text-slate-400 text-base mt-1 truncate">
               {selectedMarker
-                ? `Tracking progression for: ${selectedMarker.title}`
-                : `${markers.length} points documented across current model`}
+                ? `Suivi de progression : ${selectedMarker.title}`
+                : `${markers.length} point${markers.length > 1 ? "s" : ""} documenté${markers.length > 1 ? "s" : ""} sur le modèle`}
             </p>
           </div>
 
@@ -104,36 +127,79 @@ export const Sidebar: React.FC<SidebarProps> = ({
             <div className="flex items-center gap-1.5 shrink-0">
               <button
                 onClick={onImport}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-slate-400 hover:text-white hover:bg-slate-800 border border-slate-700/50 hover:border-slate-600 transition-all"
+                className="flex items-center justify-center w-9 h-9 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 border border-slate-700/50 hover:border-slate-600 transition-all"
                 title="Importer une session"
               >
-                <Upload size={14} />
-                <span>Import</span>
+                <Upload size={16} />
               </button>
               <button
                 onClick={onExport}
                 disabled={markers.length === 0}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-slate-400 hover:text-white hover:bg-slate-800 border border-slate-700/50 hover:border-slate-600 transition-all disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:text-slate-400 disabled:hover:bg-transparent disabled:hover:border-slate-700/50"
+                className="flex items-center justify-center w-9 h-9 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 border border-slate-700/50 hover:border-slate-600 transition-all disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:text-slate-400 disabled:hover:bg-transparent disabled:hover:border-slate-700/50"
                 title={markers.length === 0 ? "Aucune donnée à exporter" : "Exporter la session"}
               >
-                <Download size={14} />
-                <span>Export</span>
+                <Download size={16} />
+              </button>
+              <button
+                onClick={onExportPDF}
+                disabled={markers.length === 0}
+                className="flex items-center justify-center w-9 h-9 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 border border-slate-700/50 hover:border-slate-600 transition-all disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:text-slate-400 disabled:hover:bg-transparent disabled:hover:border-slate-700/50"
+                title={markers.length === 0 ? "Aucune donnée" : "Rapport PDF"}
+              >
+                <FileText size={16} />
               </button>
             </div>
           )}
         </div>
       </div>
 
+      {!selectedMarker && <StatsBar markers={markers} />}
+
       <div className="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar">
         {selectedMarker ? (
           // Detailed View: Timeline of Entries
           <div className="space-y-6">
-            <button
-              onClick={() => onSelectMarker(null)}
-              className="text-blue-400 hover:text-blue-300 text-sm flex items-center gap-1 font-medium transition-colors"
-            >
-              ← Back to Overview
-            </button>
+            <div className="flex items-center justify-between">
+              <button
+                onClick={() => onSelectMarker(null)}
+                className="text-blue-400 hover:text-blue-300 text-base flex items-center gap-1.5 font-medium transition-colors"
+              >
+                ← Retour
+              </button>
+              <div className="flex items-center gap-1">
+                {editingTitle === selectedMarker.id ? (
+                  <input
+                    autoFocus
+                    value={editingTitleValue}
+                    onChange={(e) => setEditingTitleValue(e.target.value)}
+                    onBlur={() => {
+                      if (editingTitleValue.trim()) onRenameMarker(selectedMarker.id, editingTitleValue.trim());
+                      setEditingTitle(null);
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        if (editingTitleValue.trim()) onRenameMarker(selectedMarker.id, editingTitleValue.trim());
+                        setEditingTitle(null);
+                      } else if (e.key === 'Escape') {
+                        setEditingTitle(null);
+                      }
+                    }}
+                    className="bg-slate-800 border border-blue-500/50 rounded-lg px-3 py-1.5 text-base text-white outline-none w-44"
+                  />
+                ) : (
+                  <button
+                    onClick={() => {
+                      setEditingTitle(selectedMarker.id);
+                      setEditingTitleValue(selectedMarker.title);
+                    }}
+                    className="text-slate-500 hover:text-blue-400 transition-colors p-1 hover:bg-slate-800 rounded"
+                    title="Renommer le point"
+                  >
+                    <Edit2 size={16} />
+                  </button>
+                )}
+              </div>
+            </div>
 
             <div className="relative pl-6 border-l-2 border-slate-800 space-y-8">
               {selectedMarker.entries.map((entry, idx) => (
@@ -148,12 +214,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   <div className="bg-slate-800/50 rounded-xl p-4 border border-slate-700/50 group/entry">
                     <div className="flex justify-between items-start mb-2">
                       <div className="flex items-center gap-2">
-                        <span className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1">
-                          <Calendar size={12} /> {entry.date}
+                        <span className="text-sm font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
+                          <Calendar size={14} /> {entry.date}
                         </span>
                         {idx === 0 && (
-                          <span className="bg-blue-500/10 text-blue-400 text-[10px] px-2 py-0.5 rounded-full font-bold uppercase">
-                            Latest
+                          <span className="bg-blue-500/10 text-blue-400 text-xs px-2.5 py-0.5 rounded-full font-bold uppercase">
+                            Récent
                           </span>
                         )}
                       </div>
@@ -164,18 +230,18 @@ export const Sidebar: React.FC<SidebarProps> = ({
                             onEditEntry(selectedMarker.id, entry);
                           }}
                           className="text-slate-400 hover:text-blue-400 transition-colors p-1 hover:bg-slate-700/50 rounded"
-                          title="Edit entry"
+                          title="Modifier l'entrée"
                         >
-                          <Edit2 size={14} />
+                          <Edit2 size={16} />
                         </button>
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
                             setConfirmConfig({
                               isOpen: true,
-                              title: "Delete Entry",
+                              title: "Supprimer l'entrée",
                               message:
-                                "Are you sure you want to delete this entry? This action cannot be undone.",
+                                "Êtes-vous sûr de vouloir supprimer cette entrée ? Cette action est irréversible.",
                               onConfirm: () => {
                                 onDeleteEntry(selectedMarker.id, entry.id);
                                 setConfirmConfig((prev) => ({
@@ -186,13 +252,49 @@ export const Sidebar: React.FC<SidebarProps> = ({
                             });
                           }}
                           className="text-slate-400 hover:text-red-400 transition-colors p-1 hover:bg-slate-700/50 rounded"
-                          title="Delete entry"
+                          title="Supprimer l'entrée"
                         >
-                          <Trash2 size={14} />
+                          <Trash2 size={16} />
                         </button>
                       </div>
                     </div>
-                    <p className="text-slate-200 text-sm leading-relaxed">
+                    {entry.painLevel != null && (
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="text-xs text-slate-500 uppercase tracking-wider font-bold">Douleur</span>
+                        <div className="flex gap-0.5">
+                          {Array.from({ length: 10 }, (_, i) => (
+                            <div
+                              key={i}
+                              className="w-2 h-4 rounded-sm"
+                              style={{
+                                backgroundColor: i < entry.painLevel!
+                                  ? entry.painLevel! <= 3 ? '#22c55e' : entry.painLevel! <= 6 ? '#eab308' : '#ef4444'
+                                  : '#1e293b',
+                              }}
+                            />
+                          ))}
+                        </div>
+                        <span
+                          className="text-xs font-bold"
+                          style={{ color: entry.painLevel <= 3 ? '#22c55e' : entry.painLevel <= 6 ? '#eab308' : '#ef4444' }}
+                        >
+                          {entry.painLevel}/10
+                        </span>
+                      </div>
+                    )}
+                    {entry.tags && entry.tags.length > 0 && (
+                      <div className="flex flex-wrap gap-1.5 mb-2">
+                        {entry.tags.map((tag) => (
+                          <span
+                            key={tag}
+                            className="text-xs px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20"
+                          >
+                            {tag}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                    <p className="text-slate-200 text-base leading-relaxed">
                       <span className="text-slate-500 font-medium mr-2">
                         {entry.date} —
                       </span>
@@ -214,16 +316,16 @@ export const Sidebar: React.FC<SidebarProps> = ({
                             className="w-full h-32 object-cover transition-transform duration-500 group-hover/img:scale-110"
                           />
                           <div className="absolute inset-0 bg-black/20 opacity-0 group-hover/img:opacity-100 transition-opacity flex items-center justify-center">
-                            <span className="bg-slate-900/80 text-white text-[10px] font-bold px-2 py-1 rounded-full backdrop-blur-sm border border-white/10">
-                              Click to enlarge
+                            <span className="bg-slate-900/80 text-white text-xs font-bold px-3 py-1 rounded-full backdrop-blur-sm border border-white/10">
+                              Cliquer pour agrandir
                             </span>
                           </div>
                         </>
                       ) : (
                         <>
                           <ImageIcon size={20} />
-                          <span className="text-[10px] font-medium uppercase tracking-wider">
-                            No image provided
+                          <span className="text-xs font-medium uppercase tracking-wider">
+                            Aucune image
                           </span>
                         </>
                       )}
@@ -238,26 +340,40 @@ export const Sidebar: React.FC<SidebarProps> = ({
               className="w-full py-4 border-2 border-dashed border-slate-700 rounded-xl flex items-center justify-center gap-2 text-slate-400 hover:text-white hover:border-slate-500 transition-all"
             >
               <Plus size={20} />
-              <span className="font-medium">Add Entry</span>
+              <span className="font-medium">Ajouter une entrée</span>
             </button>
           </div>
         ) : (
           // Global View: Marker Cards
           <div className="space-y-3">
+            {markers.length > 1 && (
+              <div className="flex items-center gap-2 pb-2">
+                <ArrowUpDown size={14} className="text-slate-500" />
+                <select
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value as 'recent' | 'alpha' | 'entries')}
+                  className="bg-slate-800 border border-slate-700 rounded-lg text-sm text-slate-400 px-2.5 py-1.5 outline-none focus:ring-1 focus:ring-blue-500"
+                >
+                  <option value="recent">Plus récent</option>
+                  <option value="alpha">Alphabétique</option>
+                  <option value="entries">Nb d'entrées</option>
+                </select>
+              </div>
+            )}
             {filteredMarkers.length === 0 ? (
               <div className="py-20 flex flex-col items-center justify-center text-center opacity-50">
                 <div className="bg-slate-800 p-4 rounded-full mb-4">
                   <CircleDot size={32} />
                 </div>
-                <p className="text-slate-400">
+                <p className="text-slate-400 text-base">
                   {searchQuery
-                    ? "No matching markers found."
-                    : "No markers placed yet."}
+                    ? "Aucun point correspondant."
+                    : "Aucun point placé pour le moment."}
                 </p>
-                <p className="text-xs">
+                <p className="text-sm mt-1">
                   {searchQuery
-                    ? "Try a different search term."
-                    : "Double click on the 3D model to start."}
+                    ? "Essayez un autre terme de recherche."
+                    : "Double-cliquez sur le modèle 3D pour commencer."}
                 </p>
               </div>
             ) : (
@@ -280,16 +396,26 @@ export const Sidebar: React.FC<SidebarProps> = ({
                           {marker.title}
                         </h3>
                         <div className="flex items-center gap-1">
-                          <span className="text-[10px] text-slate-500 font-mono whitespace-nowrap bg-slate-900/50 px-1.5 py-0.5 rounded border border-slate-700/30">
+                          <span className="text-xs text-slate-500 font-mono whitespace-nowrap bg-slate-900/50 px-2 py-0.5 rounded border border-slate-700/30">
                             {marker.entries.length}
                           </span>
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
+                              onDuplicateMarker(marker.id);
+                            }}
+                            className="p-1 text-slate-600 hover:text-blue-400 transition-colors opacity-0 group-hover:opacity-100"
+                            title="Dupliquer le point"
+                          >
+                            <Copy size={16} />
+                          </button>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
                               setConfirmConfig({
                                 isOpen: true,
-                                title: "Delete Marker",
-                                message: `Are you sure you want to delete "${marker.title}" and all its entries? This action cannot be undone.`,
+                                title: "Supprimer le point",
+                                message: `Êtes-vous sûr de vouloir supprimer "${marker.title}" et toutes ses entrées ? Cette action est irréversible.`,
                                 onConfirm: () => {
                                   onDeleteMarker(marker.id);
                                   setConfirmConfig((prev) => ({ ...prev, isOpen: false }));
@@ -297,14 +423,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
                               });
                             }}
                             className="p-1 text-slate-600 hover:text-red-400 transition-colors opacity-0 group-hover:opacity-100"
-                            title="Delete marker"
+                            title="Supprimer le point"
                           >
-                            <Trash2 size={14} />
+                            <Trash2 size={16} />
                           </button>
                         </div>
                       </div>
-                      <p className="text-sm text-slate-400 line-clamp-2 leading-snug">
-                        {marker.entries[0]?.description || "No description"}
+                      <p className="text-base text-slate-400 line-clamp-2 leading-snug">
+                        {marker.entries[0]?.description || "Aucune description"}
                       </p>
                     </div>
 
@@ -350,15 +476,15 @@ export const Sidebar: React.FC<SidebarProps> = ({
       <div className="p-4 border-t border-slate-800 bg-slate-900/80 backdrop-blur-md">
         <div className="relative">
           <Search
-            className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500"
-            size={16}
+            className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500"
+            size={18}
           />
           <input
             type="text"
-            placeholder="Search anatomy notes..."
+            placeholder="Rechercher dans les notes..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full bg-slate-800 border border-slate-700 rounded-lg py-2 pl-10 pr-4 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+            className="w-full bg-slate-800 border border-slate-700 rounded-xl py-2.5 pl-11 pr-4 text-base focus:outline-none focus:ring-1 focus:ring-blue-500"
           />
         </div>
       </div>

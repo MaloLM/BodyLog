@@ -8,7 +8,9 @@ import type {
   ArchiveMarker,
   ImportResult,
 } from "./archiveTypes";
+import { ENCRYPTED_SENTINEL } from "./archiveTypes";
 import { validateArchive } from "./archiveValidation";
+import { encryptBlob, isEncrypted, decryptBlob } from "./crypto";
 
 // --- Helpers ---
 
@@ -40,7 +42,8 @@ function extToMime(ext: string): string {
 
 export async function exportArchive(
   markers: Marker[],
-  gender: Gender
+  gender: Gender,
+  password?: string | null
 ): Promise<void> {
   const zip = new JSZip();
   const imageFolder = zip.folder("images")!;
@@ -51,6 +54,7 @@ export async function exportArchive(
     title: marker.title,
     position: marker.position,
     createdAt: marker.createdAt,
+    ...(marker.status ? { status: marker.status } : {}),
     entries: marker.entries.map((entry): ArchiveEntry => {
       if (entry.imageUrl) {
         const { data, ext } = dataUrlToBlob(entry.imageUrl);
@@ -62,6 +66,8 @@ export async function exportArchive(
           date: entry.date,
           description: entry.description,
           imageFile: `images/${filename}`,
+          ...(entry.painLevel != null ? { painLevel: entry.painLevel } : {}),
+          ...(entry.tags ? { tags: entry.tags } : {}),
         };
       }
       return {
@@ -69,6 +75,8 @@ export async function exportArchive(
         date: entry.date,
         description: entry.description,
         imageFile: null,
+        ...(entry.painLevel != null ? { painLevel: entry.painLevel } : {}),
+        ...(entry.tags ? { tags: entry.tags } : {}),
       };
     }),
   }));
@@ -95,7 +103,10 @@ export async function exportArchive(
   zip.file("manifest.json", JSON.stringify(manifest, null, 2));
   zip.file("data.json", JSON.stringify(data, null, 2));
 
-  const blob = await zip.generateAsync({ type: "blob", streamFiles: true });
+  let blob = await zip.generateAsync({ type: "blob", streamFiles: true });
+  if (password) {
+    blob = await encryptBlob(blob, password);
+  }
   const date = new Date().toISOString().split("T")[0];
   saveAs(blob, `bodylog_${date}.bodylog`);
 }
@@ -103,14 +114,27 @@ export async function exportArchive(
 // --- Import ---
 
 export async function importArchive(
-  file: File
+  file: File,
+  password?: string
 ): Promise<
   | { success: true; result: ImportResult }
   | { success: false; errors: string[] }
 > {
   let zip: JSZip;
   try {
-    const buffer = await file.arrayBuffer();
+    let buffer = await file.arrayBuffer();
+
+    if (isEncrypted(buffer)) {
+      if (!password) {
+        return { success: false, errors: [ENCRYPTED_SENTINEL] };
+      }
+      try {
+        buffer = await decryptBlob(buffer, password);
+      } catch (err) {
+        return { success: false, errors: [(err as Error).message] };
+      }
+    }
+
     zip = await JSZip.loadAsync(buffer);
   } catch {
     return {
@@ -149,6 +173,8 @@ export async function importArchive(
             date: archiveEntry.date,
             description: archiveEntry.description,
             ...(imageUrl ? { imageUrl } : {}),
+            ...(archiveEntry.painLevel != null ? { painLevel: archiveEntry.painLevel } : {}),
+            ...(archiveEntry.tags ? { tags: archiveEntry.tags } : {}),
           };
         })
       );
@@ -158,6 +184,7 @@ export async function importArchive(
         title: archiveMarker.title,
         position: archiveMarker.position,
         createdAt: archiveMarker.createdAt,
+        ...(archiveMarker.status ? { status: archiveMarker.status } : {}),
         entries,
       };
     })

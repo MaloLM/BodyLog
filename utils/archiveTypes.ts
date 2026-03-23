@@ -14,6 +14,8 @@ export interface ArchiveEntry {
   date: string;
   description: string;
   imageFile: string | null;
+  painLevel?: number;
+  tags?: string[];
 }
 
 export interface ArchiveMarker {
@@ -22,6 +24,7 @@ export interface ArchiveMarker {
   position: [number, number, number];
   createdAt: string;
   entries: ArchiveEntry[];
+  status?: 'active' | 'monitoring' | 'resolved';
 }
 
 export interface ArchiveData {
@@ -39,3 +42,5 @@ export interface ImportResult {
   manifest: ArchiveManifest;
   warnings: string[];
 }
+
+export const ENCRYPTED_SENTINEL = "__ENCRYPTED__";

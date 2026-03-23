@@ -46,17 +46,17 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
         </div>
 
         <div className="p-6 pt-0 flex gap-3">
-          <button 
+          <button
             onClick={onCancel}
             className="flex-1 py-3 text-sm font-bold text-slate-400 hover:text-white transition-colors"
           >
-            Cancel
+            Annuler
           </button>
-          <button 
+          <button
             onClick={onConfirm}
             className="flex-[2] bg-red-600 hover:bg-red-500 py-3 rounded-xl text-sm font-bold text-white shadow-lg shadow-red-900/20 transition-all active:scale-95"
           >
-            Confirm Delete
+            Confirmer la suppression
           </button>
         </div>
       </div>

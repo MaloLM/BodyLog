@@ -1,13 +1,16 @@
-import React, { useState, useCallback, useMemo, useRef } from "react";
+import React, { useState, useCallback, useMemo, useRef, useEffect } from "react";
 import { Viewer3D } from "./components/Viewer3D";
 import { Sidebar } from "./components/Sidebar";
 import { EntryModal } from "./components/EntryModal";
 import { HelpModal } from "./components/HelpModal";
 import { WelcomeModal } from "./components/WelcomeModal";
 import { ImportModal } from "./components/ImportModal";
+import { PasswordModal } from "./components/PasswordModal";
 import { Marker, Gender, Entry } from "./types";
 import { exportArchive, importArchive } from "./utils/archive";
+import { exportPDF } from "./utils/pdfExport";
 import type { ArchiveManifest } from "./utils/archiveTypes";
+import { ENCRYPTED_SENTINEL } from "./utils/archiveTypes";
 import {
   Activity,
   HelpCircle,
@@ -57,6 +60,10 @@ const App: React.FC = () => {
     markers: Marker[];
     gender: Gender;
   } | null>(null);
+  const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
+  const [passwordMode, setPasswordMode] = useState<"export" | "import">("export");
+  const [passwordError, setPasswordError] = useState("");
+  const [pendingFile, setPendingFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const selectedMarker = useMemo(
@@ -75,7 +82,7 @@ const App: React.FC = () => {
   }, []);
 
   const handleSaveMarker = useCallback(
-    (title: string, description: string, image?: string) => {
+    (title: string, description: string, image?: string, painLevel?: number, tags?: string[]) => {
       if (editingEntry) {
         // Update existing entry
         setMarkers((prev) =>
@@ -85,7 +92,7 @@ const App: React.FC = () => {
                   ...m,
                   entries: m.entries.map((e) =>
                     e.id === editingEntry.entry.id
-                      ? { ...e, description, imageUrl: image }
+                      ? { ...e, description, imageUrl: image, painLevel, tags }
                       : e
                   ),
                 }
@@ -99,6 +106,8 @@ const App: React.FC = () => {
           date: new Date().toLocaleDateString(),
           description,
           imageUrl: image,
+          painLevel,
+          tags,
         };
 
         if (pendingMarkerPos) {
@@ -150,13 +159,120 @@ const App: React.FC = () => {
     []
   );
 
-  const handleExport = useCallback(async () => {
+  const handleRenameMarker = useCallback((markerId: string, newTitle: string) => {
+    setMarkers((prev) =>
+      prev.map((m) => (m.id === markerId ? { ...m, title: newTitle } : m))
+    );
+  }, []);
+
+  const handleDuplicateMarker = useCallback((markerId: string) => {
+    setMarkers((prev) => {
+      const source = prev.find((m) => m.id === markerId);
+      if (!source) return prev;
+      const clone: Marker = {
+        ...source,
+        id: generateId(),
+        title: `${source.title} (copie)`,
+        entries: source.entries.map((e) => ({ ...e, id: generateId() })),
+        createdAt: new Date().toISOString(),
+      };
+      return [...prev, clone];
+    });
+  }, []);
+
+  // Undo / Redo
+  const [history, setHistory] = useState<Marker[][]>([]);
+  const [historyIndex, setHistoryIndex] = useState(-1);
+  const markersRef = useRef(markers);
+  markersRef.current = markers;
+
+  const pushHistory = useCallback((snapshot: Marker[]) => {
+    setHistory((prev) => {
+      const trimmed = prev.slice(0, historyIndex + 1);
+      const next = [...trimmed, snapshot].slice(-20);
+      setHistoryIndex(next.length - 1);
+      return next;
+    });
+  }, [historyIndex]);
+
+  // Wrap setMarkers to auto-push history
+  const updateMarkers = useCallback((updater: (prev: Marker[]) => Marker[]) => {
+    setMarkers((prev) => {
+      pushHistory(prev);
+      return updater(prev);
+    });
+  }, [pushHistory]);
+
+  const handleUndo = useCallback(() => {
+    if (historyIndex < 0) return;
+    const snapshot = history[historyIndex];
+    setHistoryIndex((i) => i - 1);
+    setMarkers(snapshot);
+  }, [history, historyIndex]);
+
+  const handleRedo = useCallback(() => {
+    if (historyIndex >= history.length - 1) return;
+    const next = history[historyIndex + 1];
+    if (!next) return;
+    setHistoryIndex((i) => i + 1);
+    setMarkers(next);
+  }, [history, historyIndex]);
+
+  const handleExport = useCallback(() => {
+    setPasswordMode("export");
+    setPasswordError("");
+    setIsPasswordModalOpen(true);
+  }, []);
+
+  const handleExportPDF = useCallback(async () => {
     try {
-      await exportArchive(markers, gender);
+      await exportPDF(markers, gender);
     } catch (err) {
-      console.error("Export failed:", err);
+      console.error("PDF export failed:", err);
     }
   }, [markers, gender]);
+
+  const handlePasswordConfirm = useCallback(
+    async (password: string | null) => {
+      setIsPasswordModalOpen(false);
+
+      if (passwordMode === "export") {
+        try {
+          await exportArchive(markers, gender, password);
+        } catch (err) {
+          console.error("Export failed:", err);
+        }
+        return;
+      }
+
+      // Import mode
+      if (!pendingFile || !password) return;
+      const result = await importArchive(pendingFile, password);
+      if (result.success === false) {
+        // Wrong password — reopen modal with error
+        setPasswordError(result.errors[0]);
+        setIsPasswordModalOpen(true);
+        return;
+      }
+      // Success — proceed to import modal
+      setImportErrors([]);
+      setImportManifest(result.result.manifest);
+      setImportWarnings(result.result.warnings);
+      setPendingImport({
+        markers: result.result.markers,
+        gender: result.result.gender,
+      });
+      setPendingFile(null);
+      setIsImportModalOpen(true);
+    },
+    [passwordMode, markers, gender, pendingFile]
+  );
+
+  const handlePasswordCancel = useCallback(() => {
+    setIsPasswordModalOpen(false);
+    setPendingFile(null);
+    setPasswordError("");
+  }, []);
 
   const handleFileSelect = useCallback(
     async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -167,6 +283,13 @@ const App: React.FC = () => {
 
       const result = await importArchive(file);
       if (result.success === false) {
+        if (result.errors[0] === ENCRYPTED_SENTINEL) {
+          setPendingFile(file);
+          setPasswordMode("import");
+          setPasswordError("");
+          setIsPasswordModalOpen(true);
+          return;
+        }
         setImportErrors(result.errors);
         setImportManifest(null);
         setImportWarnings([]);
@@ -185,11 +308,19 @@ const App: React.FC = () => {
     []
   );
 
-  const handleImportConfirm = useCallback(() => {
+  const handleImportConfirm = useCallback((mode: 'replace' | 'merge') => {
     if (pendingImport) {
-      setMarkers(pendingImport.markers);
-      setGender(pendingImport.gender);
-      localStorage.setItem("bodylog_gender", pendingImport.gender);
+      if (mode === 'merge') {
+        setMarkers((prev) => {
+          const existingIds = new Set(prev.map((m) => m.id));
+          const newMarkers = pendingImport.markers.filter((m) => !existingIds.has(m.id));
+          return [...prev, ...newMarkers];
+        });
+      } else {
+        setMarkers(pendingImport.markers);
+        setGender(pendingImport.gender);
+        localStorage.setItem("bodylog_gender", pendingImport.gender);
+      }
       setSelectedMarkerId(null);
     }
     setIsImportModalOpen(false);
@@ -201,6 +332,32 @@ const App: React.FC = () => {
     setPendingImport(null);
   }, []);
 
+  // Global keyboard shortcuts
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      const tag = (e.target as HTMLElement)?.tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+
+      if ((e.metaKey || e.ctrlKey) && e.key === 'z' && !e.shiftKey) {
+        e.preventDefault();
+        handleUndo();
+      } else if ((e.metaKey || e.ctrlKey) && e.key === 'z' && e.shiftKey) {
+        e.preventDefault();
+        handleRedo();
+      } else if (e.key === 'Escape') {
+        if (isPasswordModalOpen) handlePasswordCancel();
+        else if (isImportModalOpen) handleImportClose();
+        else if (isHelpOpen) setIsHelpOpen(false);
+        else if (isModalOpen) { setIsModalOpen(false); setEditingEntry(null); }
+        else if (selectedMarkerId) setSelectedMarkerId(null);
+      } else if (e.key === '?') {
+        setIsHelpOpen(true);
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [handleUndo, handleRedo, isPasswordModalOpen, handlePasswordCancel, isImportModalOpen, handleImportClose, isHelpOpen, isModalOpen, selectedMarkerId]);
+
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-slate-950 text-slate-100">
       {/* Mobile Overlay */}
@@ -208,10 +365,10 @@ const App: React.FC = () => {
         <div className="bg-blue-500/10 p-6 rounded-3xl mb-6 text-blue-400">
           <Monitor size={48} />
         </div>
-        <h1 className="text-2xl font-bold text-white mb-4">Desktop Only</h1>
+        <h1 className="text-2xl font-bold text-white mb-4">Bureau uniquement</h1>
         <p className="text-slate-400 max-w-xs leading-relaxed">
-          BodyLog is designed for high-precision 3D anatomical tracking and is
-          currently only available on desktop devices.
+          BodyLog est conçu pour le suivi anatomique 3D de haute précision et
+          n'est actuellement disponible que sur ordinateur.
         </p>
       </div>
 
@@ -261,7 +418,7 @@ const App: React.FC = () => {
           <button
             onClick={() => setIsHelpOpen(true)}
             className="bg-slate-800/80 backdrop-blur-md border border-slate-700 p-2.5 rounded-xl shadow-xl text-slate-400 hover:text-white transition-all"
-            title="Help"
+            title="Aide"
           >
             <HelpCircle size={20} />
           </button>
@@ -287,7 +444,7 @@ const App: React.FC = () => {
                 ? "text-blue-400"
                 : "text-slate-400 hover:text-white"
             }`}
-            title={isSidebarOpen ? "Close Sidebar" : "Open Sidebar"}
+            title={isSidebarOpen ? "Fermer le panneau" : "Ouvrir le panneau"}
           >
             {isSidebarOpen ? (
               <PanelRightClose size={20} />
@@ -304,7 +461,7 @@ const App: React.FC = () => {
           onPointClick={handlePointClick}
           onMarkerSelect={setSelectedMarkerId}
           isModalOpen={
-            isModalOpen || isHelpOpen || isWelcomeOpen || isLightboxOpen || isImportModalOpen
+            isModalOpen || isHelpOpen || isWelcomeOpen || isLightboxOpen || isImportModalOpen || isPasswordModalOpen
           }
         />
       </div>
@@ -335,6 +492,9 @@ const App: React.FC = () => {
             onLightboxToggle={setIsLightboxOpen}
             onExport={handleExport}
             onImport={() => fileInputRef.current?.click()}
+            onExportPDF={handleExportPDF}
+            onRenameMarker={handleRenameMarker}
+            onDuplicateMarker={handleDuplicateMarker}
           />
         )}
       </div>
@@ -345,6 +505,8 @@ const App: React.FC = () => {
         isNewMarker={!!pendingMarkerPos}
         initialDescription={editingEntry?.entry.description}
         initialImage={editingEntry?.entry.imageUrl}
+        initialPainLevel={editingEntry?.entry.painLevel}
+        initialTags={editingEntry?.entry.tags}
         onClose={() => {
           setIsModalOpen(false);
           setEditingEntry(null);
@@ -366,6 +528,16 @@ const App: React.FC = () => {
         errors={importErrors}
         manifest={importManifest}
         warnings={importWarnings}
+        currentMarkerCount={markers.length}
+      />
+
+      {/* Password Modal */}
+      <PasswordModal
+        isOpen={isPasswordModalOpen}
+        mode={passwordMode}
+        onConfirm={handlePasswordConfirm}
+        onCancel={handlePasswordCancel}
+        error={passwordError}
       />
     </div>
   );

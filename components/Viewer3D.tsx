@@ -1,5 +1,5 @@
-import React, { Suspense, useState, useRef } from "react";
-import { Canvas, useFrame } from "@react-three/fiber";
+import React, { Suspense, useState, useRef, useEffect, useMemo } from "react";
+import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import {
   OrbitControls,
   Environment,
@@ -8,6 +8,7 @@ import {
 } from "@react-three/drei";
 import { Marker } from "../types";
 import { HumanoidModel } from "./HumanoidModel";
+import { Grid3x3 } from "lucide-react";
 import * as THREE from "three";
 
 interface Viewer3DProps {
@@ -98,6 +99,34 @@ const MarkerPoint: React.FC<{
   );
 };
 
+const CameraAnimator: React.FC<{
+  targetPosition: [number, number, number] | null;
+  controlsRef: React.RefObject<any>;
+}> = ({ targetPosition, controlsRef }) => {
+  const targetVec = useRef(new THREE.Vector3(0, 1, 0));
+  const animating = useRef(false);
+
+  useEffect(() => {
+    if (targetPosition) {
+      targetVec.current.set(targetPosition[0], targetPosition[1], targetPosition[2]);
+      animating.current = true;
+    }
+  }, [targetPosition]);
+
+  useFrame(() => {
+    if (!animating.current || !controlsRef.current) return;
+    const controls = controlsRef.current;
+    const current = controls.target as THREE.Vector3;
+    current.lerp(targetVec.current, 0.08);
+    controls.update();
+    if (current.distanceTo(targetVec.current) < 0.005) {
+      animating.current = false;
+    }
+  });
+
+  return null;
+};
+
 export const Viewer3D: React.FC<Viewer3DProps> = ({
   gender,
   markers,
@@ -107,6 +136,14 @@ export const Viewer3D: React.FC<Viewer3DProps> = ({
   isModalOpen,
 }) => {
   const [fps, setFps] = useState(0);
+  const [wireframe, setWireframe] = useState(false);
+  const controlsRef = useRef<any>(null);
+
+  const selectedMarkerPos = useMemo(() => {
+    if (!selectedMarkerId) return null;
+    const m = markers.find((mk) => mk.id === selectedMarkerId);
+    return m ? m.position : null;
+  }, [selectedMarkerId, markers]);
 
   return (
     <div className="w-full h-full cursor-crosshair relative overflow-hidden">
@@ -114,6 +151,7 @@ export const Viewer3D: React.FC<Viewer3DProps> = ({
         <color attach="background" args={["#1e293b"]} />
         <PerspectiveCamera makeDefault position={[0, 1.5, 3.5]} fov={45} />
         <OrbitControls
+          ref={controlsRef}
           enablePan={false}
           minDistance={1.5}
           maxDistance={6}
@@ -123,22 +161,17 @@ export const Viewer3D: React.FC<Viewer3DProps> = ({
         <Suspense fallback={null}>
           <Environment preset="city" environmentIntensity={1} />
 
-          {/* Main Key Light */}
           <directionalLight
             position={[5, 5, 5]}
             intensity={2}
             castShadow
             shadow-mapSize={[1024, 1024]}
           />
-
-          {/* Fill Light */}
           <directionalLight
             position={[-5, 2, 2]}
             intensity={1}
             color="#cbd5e1"
           />
-
-          {/* Rim Light (Backlight) */}
           <spotLight
             position={[0, 5, -10]}
             intensity={2.5}
@@ -146,12 +179,12 @@ export const Viewer3D: React.FC<Viewer3DProps> = ({
             penumbra={1}
             color="#60a5fa"
           />
-
           <ambientLight intensity={0.4} />
 
           <group>
             <HumanoidModel
               gender={gender}
+              wireframe={wireframe}
               onBodyClick={onPointClick}
               onPointerDown={(e) => {
                 e.stopPropagation();
@@ -170,15 +203,29 @@ export const Viewer3D: React.FC<Viewer3DProps> = ({
             ))}
           </group>
 
+          <CameraAnimator targetPosition={selectedMarkerPos} controlsRef={controlsRef} />
           <FPSUpdater onUpdate={setFps} />
         </Suspense>
       </Canvas>
 
-      {/* UI Overlay - Confined to Viewer3D container */}
-      <div className="absolute bottom-6 left-6 text-slate-300 text-xs font-medium space-y-1 pointer-events-none">
-        <p>Left Click + Drag: Rotate</p>
-        <p>Scroll: Zoom</p>
-        <p>Double Click Body: Place Marker</p>
+      {/* UI Overlay */}
+      <div className="absolute bottom-6 left-6 flex items-end gap-3">
+        <div className="text-slate-300 text-xs font-medium space-y-1 pointer-events-none">
+          <p>Clic gauche + glisser : Rotation</p>
+          <p>Molette : Zoom</p>
+          <p>Double clic sur le corps : Placer un point</p>
+        </div>
+        <button
+          onClick={() => setWireframe((w) => !w)}
+          className={`pointer-events-auto p-2 rounded-lg border transition-all ${
+            wireframe
+              ? "bg-blue-500/20 border-blue-500/50 text-blue-400"
+              : "bg-slate-900/40 border-white/5 text-slate-500 hover:text-slate-300"
+          }`}
+          title={wireframe ? "Mode solide" : "Mode fil de fer"}
+        >
+          <Grid3x3 size={16} />
+        </button>
       </div>
 
       <div className="absolute bottom-6 right-6 flex items-center gap-2 bg-slate-900/20 backdrop-blur-sm px-2 py-1 rounded-md border border-white/5 pointer-events-none">

@@ -6,11 +6,12 @@ import * as THREE from 'three';
 
 interface HumanoidModelProps {
   gender: 'male' | 'female';
+  wireframe?: boolean;
   onBodyClick: (position: [number, number, number]) => void;
   onPointerDown?: (e: ThreeEvent<MouseEvent>) => void;
 }
 
-export const HumanoidModel: React.FC<HumanoidModelProps> = ({ gender, onBodyClick, onPointerDown }) => {
+export const HumanoidModel: React.FC<HumanoidModelProps> = ({ gender, wireframe = false, onBodyClick, onPointerDown }) => {
   const modelPath = gender === 'male' ? '/man.glb' : '/female.glb';
   const { scene } = useGLTF(modelPath);
 
@@ -21,14 +22,14 @@ export const HumanoidModel: React.FC<HumanoidModelProps> = ({ gender, onBodyClic
     }
   };
 
-  // Material for a minimalist look
   const material = useMemo(() => new THREE.MeshStandardMaterial({
-    color: '#334155',
+    color: wireframe ? '#64748b' : '#334155',
     roughness: 0.4,
     metalness: 0.3,
     transparent: true,
-    opacity: 0.80,
-  }), []);
+    opacity: wireframe ? 0.3 : 0.8,
+    wireframe,
+  }), [wireframe]);
 
   // Apply material and visibility logic
   useEffect(() => {

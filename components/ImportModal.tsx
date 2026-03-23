@@ -11,10 +11,11 @@ import type { ArchiveManifest } from "../utils/archiveTypes";
 interface ImportModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onConfirm: () => void;
+  onConfirm: (mode: 'replace' | 'merge') => void;
   errors: string[];
   manifest: ArchiveManifest | null;
   warnings: string[];
+  currentMarkerCount: number;
 }
 
 export const ImportModal: React.FC<ImportModalProps> = ({
@@ -24,6 +25,7 @@ export const ImportModal: React.FC<ImportModalProps> = ({
   errors,
   manifest,
   warnings,
+  currentMarkerCount,
 }) => {
   if (!isOpen) return null;
 
@@ -130,13 +132,22 @@ export const ImportModal: React.FC<ImportModalProps> = ({
                 </div>
               )}
 
-              <div className="flex items-start gap-2 text-amber-400/80 text-sm bg-amber-500/10 rounded-lg p-3">
-                <AlertTriangle size={16} className="mt-0.5 shrink-0" />
-                <span>
-                  Les données actuelles seront remplacées par celles de
-                  l'archive.
-                </span>
-              </div>
+              {currentMarkerCount > 0 ? (
+                <div className="flex items-start gap-2 text-slate-300 text-sm bg-slate-800/50 rounded-lg p-3">
+                  <AlertTriangle size={16} className="mt-0.5 shrink-0 text-amber-400" />
+                  <span>
+                    Vous avez déjà <strong>{currentMarkerCount}</strong> point{currentMarkerCount > 1 ? 's' : ''} en session.
+                    Choisissez comment importer.
+                  </span>
+                </div>
+              ) : (
+                <div className="flex items-start gap-2 text-amber-400/80 text-sm bg-amber-500/10 rounded-lg p-3">
+                  <AlertTriangle size={16} className="mt-0.5 shrink-0" />
+                  <span>
+                    Les données de l'archive seront chargées dans la session.
+                  </span>
+                </div>
+              )}
             </>
           ) : null}
         </div>
@@ -149,14 +160,29 @@ export const ImportModal: React.FC<ImportModalProps> = ({
           >
             {hasErrors ? "Fermer" : "Annuler"}
           </button>
-          {!hasErrors && (
+          {!hasErrors && currentMarkerCount > 0 ? (
+            <>
+              <button
+                onClick={() => onConfirm('merge')}
+                className="flex-1 bg-slate-700 hover:bg-slate-600 py-3 rounded-xl text-sm font-bold text-white transition-all active:scale-95"
+              >
+                Fusionner
+              </button>
+              <button
+                onClick={() => onConfirm('replace')}
+                className="flex-1 bg-blue-600 hover:bg-blue-500 py-3 rounded-xl text-sm font-bold text-white shadow-lg shadow-blue-900/20 transition-all active:scale-95"
+              >
+                Remplacer
+              </button>
+            </>
+          ) : !hasErrors ? (
             <button
-              onClick={onConfirm}
+              onClick={() => onConfirm('replace')}
               className="flex-[2] bg-blue-600 hover:bg-blue-500 py-3 rounded-xl text-sm font-bold text-white shadow-lg shadow-blue-900/20 transition-all active:scale-95"
             >
               Importer
             </button>
-          )}
+          ) : null}
         </div>
       </div>
     </div>

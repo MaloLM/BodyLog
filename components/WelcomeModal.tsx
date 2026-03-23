@@ -32,17 +32,17 @@ export const WelcomeModal: React.FC<WelcomeModalProps> = ({ isOpen, onClose }) =
             </div>
           </div>
 
-          <h1 className="text-3xl font-bold text-white mb-2">Welcome to BodyLog</h1>
-          <p className="text-slate-400 mb-8">Your personal 3D anatomical progress tracker.</p>
-          
+          <h1 className="text-3xl font-bold text-white mb-2">Bienvenue sur BodyLog</h1>
+          <p className="text-slate-400 mb-8">Votre outil de suivi anatomique 3D personnel.</p>
+
           <div className="grid gap-6 text-left mb-10">
             <div className="flex items-start gap-4">
               <div className="p-2 bg-slate-800 rounded-lg text-blue-400 shrink-0">
                 <Shield size={20} />
               </div>
               <div>
-                <h3 className="font-semibold text-slate-200 text-sm">Track with Precision</h3>
-                <p className="text-xs text-slate-400 leading-relaxed">Document physical changes, injuries, or progress directly on a high-fidelity 3D model.</p>
+                <h3 className="font-semibold text-slate-200 text-sm">Suivi de précision</h3>
+                <p className="text-xs text-slate-400 leading-relaxed">Documentez les changements physiques, blessures ou progrès directement sur un modèle 3D haute fidélité.</p>
               </div>
             </div>
 
@@ -51,8 +51,8 @@ export const WelcomeModal: React.FC<WelcomeModalProps> = ({ isOpen, onClose }) =
                 <BarChart3 size={20} />
               </div>
               <div>
-                <h3 className="font-semibold text-slate-200 text-sm">Visual History</h3>
-                <p className="text-xs text-slate-400 leading-relaxed">Keep a chronological record of entries for every point of interest on your body.</p>
+                <h3 className="font-semibold text-slate-200 text-sm">Historique visuel</h3>
+                <p className="text-xs text-slate-400 leading-relaxed">Conservez un historique chronologique des observations pour chaque point d'intérêt sur le corps.</p>
               </div>
             </div>
 
@@ -61,19 +61,19 @@ export const WelcomeModal: React.FC<WelcomeModalProps> = ({ isOpen, onClose }) =
                 <MousePointerClick size={20} />
               </div>
               <div>
-                <h3 className="font-semibold text-blue-300 text-sm italic">Get Started</h3>
+                <h3 className="font-semibold text-blue-300 text-sm italic">Pour commencer</h3>
                 <p className="text-xs text-blue-200/70 leading-relaxed font-medium">
-                  Simply <span className="text-blue-400 font-bold underline underline-offset-2">double click</span> anywhere on the 3D model to add your first "point".
+                  Faites un <span className="text-blue-400 font-bold underline underline-offset-2">double clic</span> n'importe où sur le modèle 3D pour placer votre premier point.
                 </p>
               </div>
             </div>
           </div>
 
-          <button 
+          <button
             onClick={onClose}
             className="w-full py-4 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-2xl transition-all shadow-lg shadow-blue-600/25 hover:scale-[1.02] active:scale-[0.98]"
           >
-            Start Tracking
+            Commencer le suivi
           </button>
         </div>
       </div>
