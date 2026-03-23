@@ -1,10 +1,13 @@
-import React, { useState, useCallback, useMemo } from "react";
+import React, { useState, useCallback, useMemo, useRef } from "react";
 import { Viewer3D } from "./components/Viewer3D";
 import { Sidebar } from "./components/Sidebar";
 import { EntryModal } from "./components/EntryModal";
 import { HelpModal } from "./components/HelpModal";
 import { WelcomeModal } from "./components/WelcomeModal";
+import { ImportModal } from "./components/ImportModal";
 import { Marker, Gender, Entry } from "./types";
+import { exportArchive, importArchive } from "./utils/archive";
+import type { ArchiveManifest } from "./utils/archiveTypes";
 import {
   Activity,
   HelpCircle,
@@ -46,6 +49,15 @@ const App: React.FC = () => {
     markerId: string;
     entry: Entry;
   } | null>(null);
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+  const [importErrors, setImportErrors] = useState<string[]>([]);
+  const [importManifest, setImportManifest] = useState<ArchiveManifest | null>(null);
+  const [importWarnings, setImportWarnings] = useState<string[]>([]);
+  const [pendingImport, setPendingImport] = useState<{
+    markers: Marker[];
+    gender: Gender;
+  } | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const selectedMarker = useMemo(
     () => markers.find((m) => m.id === selectedMarkerId) || null,
@@ -138,6 +150,57 @@ const App: React.FC = () => {
     []
   );
 
+  const handleExport = useCallback(async () => {
+    try {
+      await exportArchive(markers, gender);
+    } catch (err) {
+      console.error("Export failed:", err);
+    }
+  }, [markers, gender]);
+
+  const handleFileSelect = useCallback(
+    async (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+      // Reset input so the same file can be re-selected
+      e.target.value = "";
+
+      const result = await importArchive(file);
+      if (result.success === false) {
+        setImportErrors(result.errors);
+        setImportManifest(null);
+        setImportWarnings([]);
+        setPendingImport(null);
+      } else {
+        setImportErrors([]);
+        setImportManifest(result.result.manifest);
+        setImportWarnings(result.result.warnings);
+        setPendingImport({
+          markers: result.result.markers,
+          gender: result.result.gender,
+        });
+      }
+      setIsImportModalOpen(true);
+    },
+    []
+  );
+
+  const handleImportConfirm = useCallback(() => {
+    if (pendingImport) {
+      setMarkers(pendingImport.markers);
+      setGender(pendingImport.gender);
+      localStorage.setItem("bodylog_gender", pendingImport.gender);
+      setSelectedMarkerId(null);
+    }
+    setIsImportModalOpen(false);
+    setPendingImport(null);
+  }, [pendingImport]);
+
+  const handleImportClose = useCallback(() => {
+    setIsImportModalOpen(false);
+    setPendingImport(null);
+  }, []);
+
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-slate-950 text-slate-100">
       {/* Mobile Overlay */}
@@ -202,6 +265,14 @@ const App: React.FC = () => {
           >
             <HelpCircle size={20} />
           </button>
+
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".bodylog,.zip"
+            onChange={handleFileSelect}
+            hidden
+          />
         </div>
 
         <div className="absolute top-6 right-6 z-10">
@@ -233,7 +304,7 @@ const App: React.FC = () => {
           onPointClick={handlePointClick}
           onMarkerSelect={setSelectedMarkerId}
           isModalOpen={
-            isModalOpen || isHelpOpen || isWelcomeOpen || isLightboxOpen
+            isModalOpen || isHelpOpen || isWelcomeOpen || isLightboxOpen || isImportModalOpen
           }
         />
       </div>
@@ -262,6 +333,8 @@ const App: React.FC = () => {
             onDeleteMarker={handleDeleteMarker}
             onDeleteEntry={handleDeleteEntry}
             onLightboxToggle={setIsLightboxOpen}
+            onExport={handleExport}
+            onImport={() => fileInputRef.current?.click()}
           />
         )}
       </div>
@@ -284,6 +357,16 @@ const App: React.FC = () => {
 
       {/* Welcome Modal */}
       <WelcomeModal isOpen={isWelcomeOpen} onClose={handleCloseWelcome} />
+
+      {/* Import Modal */}
+      <ImportModal
+        isOpen={isImportModalOpen}
+        onClose={handleImportClose}
+        onConfirm={handleImportConfirm}
+        errors={importErrors}
+        manifest={importManifest}
+        warnings={importWarnings}
+      />
     </div>
   );
 };

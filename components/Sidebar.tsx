@@ -8,6 +8,8 @@ import {
   Image as ImageIcon,
   Trash2,
   Edit2,
+  Download,
+  Upload,
 } from "lucide-react";
 import { ImageLightbox } from "./ImageLightbox";
 import { ConfirmModal } from "./ConfirmModal";
@@ -23,6 +25,8 @@ interface SidebarProps {
   onDeleteMarker: (id: string) => void;
   onDeleteEntry: (markerId: string, entryId: string) => void;
   onLightboxToggle?: (isOpen: boolean) => void;
+  onExport: () => void;
+  onImport: () => void;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
@@ -34,6 +38,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onDeleteMarker,
   onDeleteEntry,
   onLightboxToggle,
+  onExport,
+  onImport,
 }) => {
   const [lightboxIndex, setLightboxIndex] = useState(-1);
   const [searchQuery, setSearchQuery] = useState("");
@@ -81,15 +87,41 @@ export const Sidebar: React.FC<SidebarProps> = ({
   return (
     <div className="flex flex-col h-full">
       <div className="p-6 border-b border-slate-800">
-        <h2 className="text-xl font-bold text-white flex items-center gap-2">
-          {selectedMarker ? <History className="text-blue-500" /> : <></>}
-          {selectedMarker ? "Marker Timeline" : "Anatomy Overview"}
-        </h2>
-        <p className="text-slate-400 text-sm mt-1">
-          {selectedMarker
-            ? `Tracking progression for: ${selectedMarker.title}`
-            : `${markers.length} points documented across current model`}
-        </p>
+        <div className="flex items-start justify-between">
+          <div>
+            <h2 className="text-xl font-bold text-white flex items-center gap-2">
+              {selectedMarker ? <History className="text-blue-500" /> : <></>}
+              {selectedMarker ? "Marker Timeline" : "Anatomy Overview"}
+            </h2>
+            <p className="text-slate-400 text-sm mt-1">
+              {selectedMarker
+                ? `Tracking progression for: ${selectedMarker.title}`
+                : `${markers.length} points documented across current model`}
+            </p>
+          </div>
+
+          {!selectedMarker && (
+            <div className="flex items-center gap-1.5 shrink-0">
+              <button
+                onClick={onImport}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-slate-400 hover:text-white hover:bg-slate-800 border border-slate-700/50 hover:border-slate-600 transition-all"
+                title="Importer une session"
+              >
+                <Upload size={14} />
+                <span>Import</span>
+              </button>
+              <button
+                onClick={onExport}
+                disabled={markers.length === 0}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-slate-400 hover:text-white hover:bg-slate-800 border border-slate-700/50 hover:border-slate-600 transition-all disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:text-slate-400 disabled:hover:bg-transparent disabled:hover:border-slate-700/50"
+                title={markers.length === 0 ? "Aucune donnée à exporter" : "Exporter la session"}
+              >
+                <Download size={14} />
+                <span>Export</span>
+              </button>
+            </div>
+          )}
+        </div>
       </div>
 
       <div className="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar">
