@@ -3,16 +3,26 @@ import React, { useMemo, useEffect } from 'react';
 import { ThreeEvent } from '@react-three/fiber';
 import { useGLTF } from '@react-three/drei';
 import * as THREE from 'three';
+import type { SkinMode } from '../App';
+
+const SKIN_MATERIALS: Record<SkinMode, { color: string; opacity: number; roughness: number; metalness: number; wireframe: boolean }> = {
+  mesh:      { color: '#334155', opacity: 0.8, roughness: 0.4, metalness: 0.3, wireframe: false },
+  wireframe: { color: '#64748b', opacity: 0.3, roughness: 0.4, metalness: 0.3, wireframe: true },
+  light:     { color: '#FFDBAC', opacity: 1, roughness: 0.7, metalness: 0.1, wireframe: false },
+  medium:    { color: '#C68642', opacity: 1, roughness: 0.7, metalness: 0.1, wireframe: false },
+  dark:      { color: '#8D5524', opacity: 1, roughness: 0.7, metalness: 0.1, wireframe: false },
+  ebony:     { color: '#4A2912', opacity: 1, roughness: 0.7, metalness: 0.1, wireframe: false },
+};
 
 interface HumanoidModelProps {
   gender: 'male' | 'female';
-  wireframe?: boolean;
+  skinMode?: SkinMode;
   onBodyClick: (position: [number, number, number]) => void;
   onPointerDown?: (e: ThreeEvent<MouseEvent>) => void;
   onBoundsComputed?: (height: number) => void;
 }
 
-export const HumanoidModel: React.FC<HumanoidModelProps> = ({ gender, wireframe = false, onBodyClick, onPointerDown, onBoundsComputed }) => {
+export const HumanoidModel: React.FC<HumanoidModelProps> = ({ gender, skinMode = 'mesh', onBodyClick, onPointerDown, onBoundsComputed }) => {
   const modelPath = gender === 'male' ? '/man.glb' : '/female.glb';
   const { scene } = useGLTF(modelPath);
 
@@ -41,14 +51,17 @@ export const HumanoidModel: React.FC<HumanoidModelProps> = ({ gender, wireframe 
     }
   };
 
-  const material = useMemo(() => new THREE.MeshStandardMaterial({
-    color: wireframe ? '#64748b' : '#334155',
-    roughness: 0.4,
-    metalness: 0.3,
-    transparent: true,
-    opacity: wireframe ? 0.3 : 0.8,
-    wireframe,
-  }), [wireframe]);
+  const material = useMemo(() => {
+    const cfg = SKIN_MATERIALS[skinMode];
+    return new THREE.MeshStandardMaterial({
+      color: cfg.color,
+      roughness: cfg.roughness,
+      metalness: cfg.metalness,
+      transparent: true,
+      opacity: cfg.opacity,
+      wireframe: cfg.wireframe,
+    });
+  }, [skinMode]);
 
   // Apply material and visibility logic
   useEffect(() => {

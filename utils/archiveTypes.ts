@@ -1,4 +1,6 @@
 import { Gender, Marker } from "../types";
+import type { SkinMode } from "../App";
+import type { Language } from "../i18n";
 
 export interface ArchiveManifest {
   formatVersion: number;
@@ -30,6 +32,8 @@ export interface ArchiveMarker {
 export interface ArchiveData {
   gender: Gender;
   markers: ArchiveMarker[];
+  skinMode?: SkinMode;
+  language?: Language;
 }
 
 export type ValidationResult =
@@ -39,6 +43,8 @@ export type ValidationResult =
 export interface ImportResult {
   markers: Marker[];
   gender: Gender;
+  skinMode?: SkinMode;
+  language?: Language;
   manifest: ArchiveManifest;
   warnings: string[];
 }

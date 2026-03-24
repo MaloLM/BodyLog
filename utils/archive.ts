@@ -44,7 +44,8 @@ function extToMime(ext: string): string {
 export async function exportArchive(
   markers: Marker[],
   gender: Gender,
-  password?: string | null
+  password?: string | null,
+  options?: { skinMode?: string; language?: string }
 ): Promise<void> {
   const zip = new JSZip();
   const imageFolder = zip.folder("images")!;
@@ -99,6 +100,8 @@ export async function exportArchive(
   const data: ArchiveData = {
     gender,
     markers: archiveMarkers,
+    ...(options?.skinMode ? { skinMode: options.skinMode } : {}),
+    ...(options?.language ? { language: options.language } : {}),
   };
 
   zip.file("manifest.json", JSON.stringify(manifest, null, 2));
@@ -197,6 +200,8 @@ export async function importArchive(
     result: {
       markers,
       gender: data.gender,
+      skinMode: data.skinMode,
+      language: data.language,
       manifest,
       warnings,
     },

@@ -131,6 +131,15 @@ export const fr: Translations = {
   wireframeMode: 'Mode fil de fer',
   performance: 'Performance',
 
+  // Skin mode
+  skinColor: 'Couleur de peau',
+  skinMesh: 'Mesh',
+  skinWireframe: 'Fil de fer',
+  skinLight: 'Claire',
+  skinMedium: 'Moyenne',
+  skinDark: 'Foncée',
+  skinEbony: 'Ébène',
+
   // StatsBar.tsx
   pointCount: (count: number) => `${count} point${count > 1 ? 's' : ''}`,
   entryCount: (count: number) => `${count} entrée${count > 1 ? 's' : ''}`,

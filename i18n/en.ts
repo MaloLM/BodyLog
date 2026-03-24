@@ -131,6 +131,15 @@ export const en: Translations = {
   wireframeMode: 'Wireframe mode',
   performance: 'Performance',
 
+  // Skin mode
+  skinColor: 'Skin color',
+  skinMesh: 'Mesh',
+  skinWireframe: 'Wireframe',
+  skinLight: 'Light',
+  skinMedium: 'Medium',
+  skinDark: 'Dark',
+  skinEbony: 'Ebony',
+
   // StatsBar.tsx
   pointCount: (count: number) => `${count} point${count > 1 ? 's' : ''}`,
   entryCount: (count: number) => `${count} ${count > 1 ? 'entries' : 'entry'}`,

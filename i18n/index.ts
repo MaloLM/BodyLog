@@ -135,6 +135,15 @@ export interface Translations {
   wireframeMode: string;
   performance: string;
 
+  // Skin mode
+  skinColor: string;
+  skinMesh: string;
+  skinWireframe: string;
+  skinLight: string;
+  skinMedium: string;
+  skinDark: string;
+  skinEbony: string;
+
   // StatsBar.tsx
   pointCount: (count: number) => string;
   entryCount: (count: number) => string;

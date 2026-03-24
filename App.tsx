@@ -20,7 +20,19 @@ import {
   Monitor,
   ChevronDown,
   Grid3x3,
+  Palette,
 } from "lucide-react";
+
+export type SkinMode = 'mesh' | 'wireframe' | 'light' | 'medium' | 'dark' | 'ebony';
+
+const SKIN_OPTIONS: { key: SkinMode; color: string; isWireframe?: boolean }[] = [
+  { key: 'mesh', color: '#334155' },
+  { key: 'wireframe', color: '#64748b', isWireframe: true },
+  { key: 'light', color: '#FFDBAC' },
+  { key: 'medium', color: '#C68642' },
+  { key: 'dark', color: '#8D5524' },
+  { key: 'ebony', color: '#4A2912' },
+];
 
 const LanguageSwitcher: React.FC = () => {
   const { language, setLanguage } = useTranslation();
@@ -76,14 +88,19 @@ const generateId = () => {
 };
 
 const App: React.FC = () => {
-  const { t } = useTranslation();
+  const { t, language, setLanguage } = useTranslation();
   const [markers, setMarkers] = useState<Marker[]>([]);
   const [selectedMarkerId, setSelectedMarkerId] = useState<string | null>(null);
   const [gender, setGender] = useState<Gender>(() => {
     const saved = localStorage.getItem("bodylog_gender");
     return (saved as Gender) || "male";
   });
-  const [wireframe, setWireframe] = useState(false);
+  const [skinMode, setSkinMode] = useState<SkinMode>(() => {
+    const saved = localStorage.getItem("bodylog_skin_mode");
+    return (saved as SkinMode) || "mesh";
+  });
+  const [isSkinPopoverOpen, setIsSkinPopoverOpen] = useState(false);
+  const skinPopoverRef = useRef<HTMLDivElement>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(() => {
     const saved = localStorage.getItem("bodylog_sidebar_open");
     return saved !== null ? saved === "true" : true;
@@ -109,6 +126,8 @@ const App: React.FC = () => {
   const [pendingImport, setPendingImport] = useState<{
     markers: Marker[];
     gender: Gender;
+    skinMode?: SkinMode;
+    language?: Language;
   } | null>(null);
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
   const [passwordMode, setPasswordMode] = useState<"export" | "import">("export");
@@ -288,7 +307,7 @@ const App: React.FC = () => {
 
       if (passwordMode === "export") {
         try {
-          await exportArchive(markers, gender, password);
+          await exportArchive(markers, gender, password, { skinMode, language });
         } catch (err) {
           console.error("Export failed:", err);
         }
@@ -311,6 +330,8 @@ const App: React.FC = () => {
       setPendingImport({
         markers: result.result.markers,
         gender: result.result.gender,
+        skinMode: result.result.skinMode,
+        language: result.result.language,
       });
       setPendingFile(null);
       setIsImportModalOpen(true);
@@ -370,6 +391,13 @@ const App: React.FC = () => {
         setMarkers(pendingImport.markers);
         setGender(pendingImport.gender);
         localStorage.setItem("bodylog_gender", pendingImport.gender);
+        if (pendingImport.skinMode) {
+          setSkinMode(pendingImport.skinMode);
+          localStorage.setItem("bodylog_skin_mode", pendingImport.skinMode);
+        }
+        if (pendingImport.language) {
+          setLanguage(pendingImport.language);
+        }
       }
       setSelectedMarkerId(null);
     }
@@ -380,6 +408,17 @@ const App: React.FC = () => {
   const handleImportClose = useCallback(() => {
     setIsImportModalOpen(false);
     setPendingImport(null);
+  }, []);
+
+  // Close skin popover on click outside
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (skinPopoverRef.current && !skinPopoverRef.current.contains(e.target as Node)) {
+        setIsSkinPopoverOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
   }, []);
 
   // Global keyboard shortcuts
@@ -464,17 +503,44 @@ const App: React.FC = () => {
             </button>
           </div>
 
-          <button
-            onClick={() => setWireframe((w) => !w)}
-            className={`bg-slate-800/80 backdrop-blur-md border border-slate-700 p-2.5 rounded-xl shadow-xl transition-all ${
-              wireframe
-                ? "text-blue-400 border-blue-500/50"
-                : "text-slate-400 hover:text-white"
-            }`}
-            title={wireframe ? t.solidMode : t.wireframeMode}
-          >
-            <Grid3x3 size={20} />
-          </button>
+          <div ref={skinPopoverRef} className="relative">
+            <button
+              onClick={() => setIsSkinPopoverOpen((o) => !o)}
+              className={`bg-slate-800/80 backdrop-blur-md border border-slate-700 p-2.5 rounded-xl shadow-xl transition-all ${
+                isSkinPopoverOpen
+                  ? "text-blue-400 border-blue-500/50"
+                  : "text-slate-400 hover:text-white"
+              }`}
+              title={t.skinColor}
+            >
+              <Palette size={20} />
+            </button>
+            {isSkinPopoverOpen && (
+              <div className="absolute top-full mt-2 left-1/2 -translate-x-1/2 bg-slate-800 border border-slate-700 rounded-xl shadow-2xl p-3 z-50 flex items-center gap-2">
+                {SKIN_OPTIONS.map((opt) => (
+                  <button
+                    key={opt.key}
+                    onClick={() => {
+                      setSkinMode(opt.key);
+                      localStorage.setItem("bodylog_skin_mode", opt.key);
+                      setIsSkinPopoverOpen(false);
+                    }}
+                    className={`relative w-8 h-8 rounded-full border-2 transition-all flex items-center justify-center ${
+                      skinMode === opt.key
+                        ? "border-blue-400 scale-110 shadow-lg shadow-blue-500/30"
+                        : "border-slate-600 hover:border-slate-400 hover:scale-105"
+                    }`}
+                    style={{ backgroundColor: opt.color }}
+                    title={
+                      ({ mesh: t.skinMesh, wireframe: t.skinWireframe, light: t.skinLight, medium: t.skinMedium, dark: t.skinDark, ebony: t.skinEbony } as Record<SkinMode, string>)[opt.key]
+                    }
+                  >
+                    {opt.isWireframe && <Grid3x3 size={14} className="text-white/80" />}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
 
           <button
             onClick={() => setIsHelpOpen(true)}
@@ -519,7 +585,7 @@ const App: React.FC = () => {
 
         <Viewer3D
           gender={gender}
-          wireframe={wireframe}
+          skinMode={skinMode}
           markers={markers}
           selectedMarkerId={selectedMarkerId}
           onPointClick={handlePointClick}

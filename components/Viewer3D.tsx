@@ -11,9 +11,11 @@ import { HumanoidModel } from "./HumanoidModel";
 import { useTranslation } from "../i18n";
 import * as THREE from "three";
 
+import type { SkinMode } from "../App";
+
 interface Viewer3DProps {
   gender: "male" | "female";
-  wireframe: boolean;
+  skinMode: SkinMode;
   markers: Marker[];
   selectedMarkerId: string | null;
   onPointClick: (position: [number, number, number]) => void;
@@ -130,7 +132,7 @@ const CameraAnimator: React.FC<{
 
 export const Viewer3D: React.FC<Viewer3DProps> = ({
   gender,
-  wireframe,
+  skinMode,
   markers,
   selectedMarkerId,
   onPointClick,
@@ -187,7 +189,7 @@ export const Viewer3D: React.FC<Viewer3DProps> = ({
           <group>
             <HumanoidModel
               gender={gender}
-              wireframe={wireframe}
+              skinMode={skinMode}
               onBodyClick={onPointClick}
               onPointerDown={(e) => {
                 e.stopPropagation();
