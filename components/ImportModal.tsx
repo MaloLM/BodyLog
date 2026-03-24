@@ -7,6 +7,7 @@ import {
   AlertCircle,
 } from "lucide-react";
 import type { ArchiveManifest } from "../utils/archiveTypes";
+import { useTranslation } from "../i18n";
 
 interface ImportModalProps {
   isOpen: boolean;
@@ -27,6 +28,7 @@ export const ImportModal: React.FC<ImportModalProps> = ({
   warnings,
   currentMarkerCount,
 }) => {
+  const { t } = useTranslation();
   if (!isOpen) return null;
 
   const hasErrors = errors.length > 0;
@@ -61,7 +63,7 @@ export const ImportModal: React.FC<ImportModalProps> = ({
               )}
             </div>
             <h3 className="text-xl font-bold text-white">
-              {hasErrors ? "Erreur d'import" : "Importer une session"}
+              {hasErrors ? t.importError : t.importSessionTitle}
             </h3>
           </div>
           <button
@@ -77,7 +79,7 @@ export const ImportModal: React.FC<ImportModalProps> = ({
           {hasErrors ? (
             <div className="space-y-2">
               <p className="text-slate-300 text-sm mb-3">
-                L'archive sélectionnée n'est pas valide :
+                {t.invalidArchive}
               </p>
               {errors.map((error, i) => (
                 <div
@@ -93,25 +95,25 @@ export const ImportModal: React.FC<ImportModalProps> = ({
             <>
               <div className="bg-slate-800/50 rounded-xl p-4 space-y-2">
                 <div className="flex justify-between text-sm">
-                  <span className="text-slate-400">Points anatomiques</span>
+                  <span className="text-slate-400">{t.anatomicalPoints}</span>
                   <span className="text-white font-medium">
                     {manifest.markerCount}
                   </span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-slate-400">Entrées</span>
+                  <span className="text-slate-400">{t.entries}</span>
                   <span className="text-white font-medium">
                     {manifest.entryCount}
                   </span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-slate-400">Images</span>
+                  <span className="text-slate-400">{t.images}</span>
                   <span className="text-white font-medium">
                     {manifest.imageCount}
                   </span>
                 </div>
                 <div className="flex justify-between text-sm border-t border-slate-700 pt-2 mt-2">
-                  <span className="text-slate-400">Date d'export</span>
+                  <span className="text-slate-400">{t.exportDate}</span>
                   <span className="text-white font-medium">
                     {new Date(manifest.exportedAt).toLocaleDateString()}
                   </span>
@@ -135,16 +137,13 @@ export const ImportModal: React.FC<ImportModalProps> = ({
               {currentMarkerCount > 0 ? (
                 <div className="flex items-start gap-2 text-slate-300 text-sm bg-slate-800/50 rounded-lg p-3">
                   <AlertTriangle size={16} className="mt-0.5 shrink-0 text-amber-400" />
-                  <span>
-                    Vous avez déjà <strong>{currentMarkerCount}</strong> point{currentMarkerCount > 1 ? 's' : ''} en session.
-                    Choisissez comment importer.
-                  </span>
+                  <span dangerouslySetInnerHTML={{ __html: t.existingPointsWarning(currentMarkerCount) }} />
                 </div>
               ) : (
                 <div className="flex items-start gap-2 text-amber-400/80 text-sm bg-amber-500/10 rounded-lg p-3">
                   <AlertTriangle size={16} className="mt-0.5 shrink-0" />
                   <span>
-                    Les données de l'archive seront chargées dans la session.
+                    {t.archiveDataWillBeLoaded}
                   </span>
                 </div>
               )}
@@ -158,7 +157,7 @@ export const ImportModal: React.FC<ImportModalProps> = ({
             onClick={onClose}
             className="flex-1 py-3 text-sm font-bold text-slate-400 hover:text-white transition-colors"
           >
-            {hasErrors ? "Fermer" : "Annuler"}
+            {hasErrors ? t.close : t.cancel}
           </button>
           {!hasErrors && currentMarkerCount > 0 ? (
             <>
@@ -166,13 +165,13 @@ export const ImportModal: React.FC<ImportModalProps> = ({
                 onClick={() => onConfirm('merge')}
                 className="flex-1 bg-slate-700 hover:bg-slate-600 py-3 rounded-xl text-sm font-bold text-white transition-all active:scale-95"
               >
-                Fusionner
+                {t.merge}
               </button>
               <button
                 onClick={() => onConfirm('replace')}
                 className="flex-1 bg-blue-600 hover:bg-blue-500 py-3 rounded-xl text-sm font-bold text-white shadow-lg shadow-blue-900/20 transition-all active:scale-95"
               >
-                Remplacer
+                {t.replace}
               </button>
             </>
           ) : !hasErrors ? (
@@ -180,7 +179,7 @@ export const ImportModal: React.FC<ImportModalProps> = ({
               onClick={() => onConfirm('replace')}
               className="flex-[2] bg-blue-600 hover:bg-blue-500 py-3 rounded-xl text-sm font-bold text-white shadow-lg shadow-blue-900/20 transition-all active:scale-95"
             >
-              Importer
+              {t.importAction}
             </button>
           ) : null}
         </div>

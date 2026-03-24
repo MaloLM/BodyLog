@@ -9,11 +9,30 @@ interface HumanoidModelProps {
   wireframe?: boolean;
   onBodyClick: (position: [number, number, number]) => void;
   onPointerDown?: (e: ThreeEvent<MouseEvent>) => void;
+  onBoundsComputed?: (height: number) => void;
 }
 
-export const HumanoidModel: React.FC<HumanoidModelProps> = ({ gender, wireframe = false, onBodyClick, onPointerDown }) => {
+export const HumanoidModel: React.FC<HumanoidModelProps> = ({ gender, wireframe = false, onBodyClick, onPointerDown, onBoundsComputed }) => {
   const modelPath = gender === 'male' ? '/man.glb' : '/female.glb';
   const { scene } = useGLTF(modelPath);
+
+  const offset = useMemo(() => {
+    const box = new THREE.Box3().setFromObject(scene);
+    const center = new THREE.Vector3();
+    box.getCenter(center);
+    return new THREE.Vector3(-center.x, -box.min.y, -center.z);
+  }, [scene]);
+
+  const modelHeight = useMemo(() => {
+    const box = new THREE.Box3().setFromObject(scene);
+    return box.max.y - box.min.y;
+  }, [scene]);
+
+  useEffect(() => {
+    if (onBoundsComputed) {
+      onBoundsComputed(modelHeight);
+    }
+  }, [modelHeight, onBoundsComputed]);
 
   const handleClick = (e: ThreeEvent<MouseEvent>) => {
     e.stopPropagation();
@@ -38,7 +57,7 @@ export const HumanoidModel: React.FC<HumanoidModelProps> = ({ gender, wireframe 
         (child as THREE.Mesh).material = material;
         child.castShadow = true;
         child.receiveShadow = true;
-        
+
         // Extra safety: hide meshes that don't match the current gender
         const name = child.name.toLowerCase();
         if (gender === 'male' && name.includes('female')) {
@@ -54,11 +73,13 @@ export const HumanoidModel: React.FC<HumanoidModelProps> = ({ gender, wireframe 
 
   return (
     <group>
-      <primitive 
-        object={scene} 
-        onDoubleClick={handleClick}
-        onPointerDown={onPointerDown}
-      />
+      <group position={[offset.x, offset.y, offset.z]}>
+        <primitive
+          object={scene}
+          onDoubleClick={handleClick}
+          onPointerDown={onPointerDown}
+        />
+      </group>
       <gridHelper args={[10, 20, 0x1e293b, 0x0f172a]} position={[0, 0, 0]} />
     </group>
   );

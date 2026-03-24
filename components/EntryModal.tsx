@@ -1,8 +1,8 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { X, Camera, Save, Clock } from 'lucide-react';
-import { PRESET_TAGS } from '../types';
 import { compressImage, getImageSizeKB, formatFileSize } from '../utils/imageUtils';
+import { useTranslation } from '../i18n';
 
 interface EntryModalProps {
   isOpen: boolean;
@@ -27,6 +27,7 @@ export const EntryModal: React.FC<EntryModalProps> = ({
   onClose,
   onSave,
 }) => {
+  const { t } = useTranslation();
   const [title, setTitle] = useState(initialTitle);
   const [description, setDescription] = useState(initialDescription);
   const [image, setImage] = useState<string | undefined>(initialImage);
@@ -128,12 +129,12 @@ export const EntryModal: React.FC<EntryModalProps> = ({
             <h3 className="text-xl font-bold text-white flex items-center gap-2">
               <Clock size={20} className="text-blue-500" />
               {isNewMarker
-                ? "Nouveau point de suivi"
+                ? t.newTrackingPoint
                 : initialDescription
-                ? "Modifier l'entrée"
-                : "Nouvelle entrée"}
+                ? t.editEntryModalTitle
+                : t.newEntry}
             </h3>
-            <p className="text-slate-400 text-xs mt-0.5">Horodatage automatique : {new Date().toLocaleDateString()}</p>
+            <p className="text-slate-400 text-xs mt-0.5">{t.autoTimestamp(new Date().toLocaleDateString())}</p>
           </div>
           <button onClick={onClose} className="p-2 hover:bg-slate-800 rounded-lg text-slate-400 hover:text-white transition-colors">
             <X size={20} />
@@ -143,13 +144,13 @@ export const EntryModal: React.FC<EntryModalProps> = ({
         <form onSubmit={handleSubmit} className="p-6 space-y-5 overflow-y-auto flex-1">
           {isNewMarker && (
             <div className="space-y-2">
-              <label className="text-sm font-semibold text-slate-300">Nom du point</label>
+              <label className="text-sm font-semibold text-slate-300">{t.pointName}</label>
               <input
                 autoFocus
                 type="text"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
-                placeholder="ex. Inflammation genou gauche" 
+                placeholder={t.pointNamePlaceholder}
                 className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white focus:ring-2 focus:ring-blue-500/50 outline-none transition-all placeholder:text-slate-600"
                 required
               />
@@ -157,11 +158,11 @@ export const EntryModal: React.FC<EntryModalProps> = ({
           )}
 
           <div className="space-y-2">
-            <label className="text-sm font-semibold text-slate-300">Notes d'observation</label>
+            <label className="text-sm font-semibold text-slate-300">{t.observationNotes}</label>
             <textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="Décrivez les observations cliniques, niveaux de douleur ou symptômes visuels..."
+              placeholder={t.observationPlaceholder}
               className="w-full h-32 bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white focus:ring-2 focus:ring-blue-500/50 outline-none transition-all resize-none placeholder:text-slate-600 text-sm"
               required
             />
@@ -170,8 +171,8 @@ export const EntryModal: React.FC<EntryModalProps> = ({
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
             <div className="space-y-2">
               <label className="text-sm font-semibold text-slate-300">
-                Niveau de douleur
-                <span className="text-slate-500 font-normal ml-1">(optionnel)</span>
+                {t.painLevel}
+                <span className="text-slate-500 font-normal ml-1">{t.optional}</span>
               </label>
               <div className="flex items-center gap-3">
                 <input
@@ -201,7 +202,7 @@ export const EntryModal: React.FC<EntryModalProps> = ({
                       type="button"
                       onClick={() => setPainLevel(undefined)}
                       className="text-slate-500 hover:text-slate-300 transition-colors"
-                      title="Retirer le niveau de douleur"
+                      title={t.removePainLevel}
                     >
                       <X size={14} />
                     </button>
@@ -212,7 +213,7 @@ export const EntryModal: React.FC<EntryModalProps> = ({
                     onClick={() => setPainLevel(5)}
                     className="text-xs text-slate-500 hover:text-slate-300 transition-colors whitespace-nowrap"
                   >
-                    Activer
+                    {t.activate}
                   </button>
                 )}
               </div>
@@ -220,11 +221,11 @@ export const EntryModal: React.FC<EntryModalProps> = ({
 
             <div className="space-y-2">
               <label className="text-sm font-semibold text-slate-300">
-                Tags
-                <span className="text-slate-500 font-normal ml-1">(optionnel)</span>
+                {t.tags}
+                <span className="text-slate-500 font-normal ml-1">{t.optional}</span>
               </label>
               <div className="flex flex-wrap gap-2">
-                {PRESET_TAGS.map((tag) => {
+                {t.presetTags.map((tag) => {
                   const isSelected = selectedTags.includes(tag);
                   return (
                     <button
@@ -251,8 +252,8 @@ export const EntryModal: React.FC<EntryModalProps> = ({
 
           <div className="space-y-2">
             <label className="text-sm font-semibold text-slate-300">
-              Documentation visuelle
-              <span className="text-slate-500 font-normal ml-1">(glisser, coller ou cliquer)</span>
+              {t.visualDocumentation}
+              <span className="text-slate-500 font-normal ml-1">{t.dragPasteOrClick}</span>
             </label>
             <div
               className="flex gap-4"
@@ -268,7 +269,7 @@ export const EntryModal: React.FC<EntryModalProps> = ({
                   <div className="relative w-full group/img">
                     <img
                       src={image}
-                      alt="Aperçu"
+                      alt={t.preview}
                       className="w-full h-32 object-contain rounded-lg"
                     />
                     {imageSizeKB != null && (
@@ -287,7 +288,7 @@ export const EntryModal: React.FC<EntryModalProps> = ({
                           setImageSizeKB(null);
                         }}
                         className="bg-red-500 p-2 rounded-full text-white hover:bg-red-600 transition-colors"
-                        title="Supprimer l'image"
+                        title={t.deleteImage}
                       >
                         <X size={16} />
                       </button>
@@ -297,9 +298,9 @@ export const EntryModal: React.FC<EntryModalProps> = ({
                   <>
                     <Camera className={`mb-2 ${isDragging ? 'text-blue-400' : 'text-slate-500'}`} size={28} />
                     <span className={`text-xs ${isDragging ? 'text-blue-400' : 'text-slate-500'}`}>
-                      {isDragging ? 'Déposer l\'image ici' : 'Téléverser une image'}
+                      {isDragging ? t.dropImageHere : t.uploadImage}
                     </span>
-                    <span className="text-[10px] text-slate-600 mt-1">ou Ctrl+V pour coller</span>
+                    <span className="text-[10px] text-slate-600 mt-1">{t.ctrlVToPaste}</span>
                   </>
                 )}
               </label>
@@ -312,14 +313,14 @@ export const EntryModal: React.FC<EntryModalProps> = ({
               onClick={onClose}
               className="flex-1 py-3 text-sm font-bold text-slate-400 hover:text-white transition-colors"
             >
-              Annuler
+              {t.cancel}
             </button>
             <button
               type="submit"
               className="flex-[2] bg-blue-600 hover:bg-blue-500 py-3 rounded-xl text-sm font-bold text-white flex items-center justify-center gap-2 shadow-lg shadow-blue-900/20 transition-all active:scale-95"
             >
               <Save size={18} />
-              Sauvegarder
+              {t.save}
             </button>
           </div>
         </form>

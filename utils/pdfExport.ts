@@ -1,11 +1,6 @@
 import { jsPDF } from "jspdf";
 import type { Marker, Gender } from "../types";
-
-const STATUS_LABELS: Record<string, string> = {
-  active: "Actif",
-  monitoring: "En observation",
-  resolved: "Résolu",
-};
+import type { Translations } from "../i18n";
 
 const PAIN_COLORS: Record<string, [number, number, number]> = {
   low: [34, 197, 94],
@@ -21,7 +16,8 @@ function getPainColor(level: number): [number, number, number] {
 
 export async function exportPDF(
   markers: Marker[],
-  gender: Gender
+  gender: Gender,
+  t: Translations
 ): Promise<void> {
   const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
   const pageWidth = doc.internal.pageSize.getWidth();
@@ -39,13 +35,13 @@ export async function exportPDF(
   // Title
   doc.setFontSize(22);
   doc.setTextColor(30, 41, 59);
-  doc.text("BodyLog — Rapport de session", margin, y);
+  doc.text(t.pdfTitle, margin, y);
   y += 10;
 
   doc.setFontSize(10);
   doc.setTextColor(100, 116, 139);
   doc.text(
-    `Généré le ${new Date().toLocaleDateString()} | Modèle : ${gender === "male" ? "Masculin" : "Féminin"} | ${markers.length} point${markers.length > 1 ? "s" : ""}`,
+    t.pdfGeneratedOn(new Date().toLocaleDateString(), gender === "male" ? t.pdfGenderMale : t.pdfGenderFemale, markers.length),
     margin,
     y
   );
@@ -60,7 +56,7 @@ export async function exportPDF(
   doc.setFontSize(10);
   doc.setTextColor(71, 85, 105);
   doc.text(
-    `${markers.length} point${markers.length > 1 ? "s" : ""} · ${totalEntries} entrée${totalEntries > 1 ? "s" : ""}`,
+    `${t.pdfPoints(markers.length)} · ${t.pdfEntries(totalEntries)}`,
     margin,
     y
   );
@@ -75,7 +71,12 @@ export async function exportPDF(
     doc.setTextColor(30, 41, 59);
     doc.text(marker.title, margin, y);
 
-    const statusLabel = STATUS_LABELS[marker.status || "active"] || "Actif";
+    const statusMap: Record<string, string> = {
+      active: t.pdfStatusActive,
+      monitoring: t.pdfStatusMonitoring,
+      resolved: t.pdfStatusResolved,
+    };
+    const statusLabel = statusMap[marker.status || "active"] || t.pdfStatusActive;
     const statusX = margin + doc.getTextWidth(marker.title) + 4;
     doc.setFontSize(8);
     doc.setTextColor(100, 116, 139);
@@ -85,7 +86,7 @@ export async function exportPDF(
     doc.setFontSize(8);
     doc.setTextColor(148, 163, 184);
     doc.text(
-      `Créé le ${new Date(marker.createdAt).toLocaleDateString()} · ${marker.entries.length} entrée${marker.entries.length > 1 ? "s" : ""}`,
+      t.pdfCreatedOn(new Date(marker.createdAt).toLocaleDateString(), marker.entries.length),
       margin,
       y
     );
@@ -106,7 +107,7 @@ export async function exportPDF(
         const color = getPainColor(entry.painLevel);
         doc.setTextColor(color[0], color[1], color[2]);
         doc.setFontSize(8);
-        doc.text(`Douleur : ${entry.painLevel}/10`, margin + 2, y);
+        doc.text(t.pdfPain(entry.painLevel), margin + 2, y);
         y += 4;
       }
 
@@ -136,7 +137,7 @@ export async function exportPDF(
         } catch {
           doc.setFontSize(8);
           doc.setTextColor(148, 163, 184);
-          doc.text("[Image non intégrable]", margin + 2, y);
+          doc.text(t.pdfImageNotEmbeddable, margin + 2, y);
           y += 5;
         }
       }
@@ -152,5 +153,5 @@ export async function exportPDF(
   }
 
   const date = new Date().toISOString().split("T")[0];
-  doc.save(`bodylog_rapport_${date}.pdf`);
+  doc.save(`${t.pdfFilenamePrefix}_${date}.pdf`);
 }

@@ -11,13 +11,61 @@ import { exportArchive, importArchive } from "./utils/archive";
 import { exportPDF } from "./utils/pdfExport";
 import type { ArchiveManifest } from "./utils/archiveTypes";
 import { ENCRYPTED_SENTINEL } from "./utils/archiveTypes";
+import { useTranslation, Language } from "./i18n";
 import {
   Activity,
   HelpCircle,
   PanelRightClose,
   PanelRightOpen,
   Monitor,
+  ChevronDown,
+  Grid3x3,
 } from "lucide-react";
+
+const LanguageSwitcher: React.FC = () => {
+  const { language, setLanguage } = useTranslation();
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  const flags: Record<Language, string> = { en: '🇬🇧', fr: '🇫🇷' };
+  const labels: Record<Language, string> = { en: 'English', fr: 'Français' };
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        onClick={() => setOpen(!open)}
+        className="bg-slate-800/80 backdrop-blur-md border border-slate-700 px-3 py-2.5 rounded-xl shadow-xl text-sm flex items-center gap-1.5 hover:border-slate-600 transition-all"
+      >
+        <span className="text-base leading-none">{flags[language]}</span>
+        <ChevronDown size={14} className={`text-slate-400 transition-transform ${open ? 'rotate-180' : ''}`} />
+      </button>
+      {open && (
+        <div className="absolute top-full mt-1 right-0 bg-slate-800 border border-slate-700 rounded-xl shadow-2xl overflow-hidden z-50 min-w-[140px]">
+          {(Object.keys(flags) as Language[]).map((lang) => (
+            <button
+              key={lang}
+              onClick={() => { setLanguage(lang); setOpen(false); }}
+              className={`w-full px-4 py-2.5 text-sm flex items-center gap-2.5 transition-colors ${
+                language === lang ? 'bg-blue-600/20 text-blue-400' : 'text-slate-300 hover:bg-slate-700'
+              }`}
+            >
+              <span className="text-base leading-none">{flags[lang]}</span>
+              {labels[lang]}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
 
 // Robust ID generator to prevent crashes in non-secure contexts
 const generateId = () => {
@@ -28,12 +76,14 @@ const generateId = () => {
 };
 
 const App: React.FC = () => {
+  const { t } = useTranslation();
   const [markers, setMarkers] = useState<Marker[]>([]);
   const [selectedMarkerId, setSelectedMarkerId] = useState<string | null>(null);
   const [gender, setGender] = useState<Gender>(() => {
     const saved = localStorage.getItem("bodylog_gender");
     return (saved as Gender) || "male";
   });
+  const [wireframe, setWireframe] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(() => {
     const saved = localStorage.getItem("bodylog_sidebar_open");
     return saved !== null ? saved === "true" : true;
@@ -172,7 +222,7 @@ const App: React.FC = () => {
       const clone: Marker = {
         ...source,
         id: generateId(),
-        title: `${source.title} (copie)`,
+        title: `${source.title} ${t.copyAppendix}`,
         entries: source.entries.map((e) => ({ ...e, id: generateId() })),
         createdAt: new Date().toISOString(),
       };
@@ -226,7 +276,7 @@ const App: React.FC = () => {
 
   const handleExportPDF = useCallback(async () => {
     try {
-      await exportPDF(markers, gender);
+      await exportPDF(markers, gender, t);
     } catch (err) {
       console.error("PDF export failed:", err);
     }
@@ -247,7 +297,7 @@ const App: React.FC = () => {
 
       // Import mode
       if (!pendingFile || !password) return;
-      const result = await importArchive(pendingFile, password);
+      const result = await importArchive(pendingFile, password, t);
       if (result.success === false) {
         // Wrong password — reopen modal with error
         setPasswordError(result.errors[0]);
@@ -265,7 +315,7 @@ const App: React.FC = () => {
       setPendingFile(null);
       setIsImportModalOpen(true);
     },
-    [passwordMode, markers, gender, pendingFile]
+    [passwordMode, markers, gender, pendingFile, t]
   );
 
   const handlePasswordCancel = useCallback(() => {
@@ -281,7 +331,7 @@ const App: React.FC = () => {
       // Reset input so the same file can be re-selected
       e.target.value = "";
 
-      const result = await importArchive(file);
+      const result = await importArchive(file, undefined, t);
       if (result.success === false) {
         if (result.errors[0] === ENCRYPTED_SENTINEL) {
           setPendingFile(file);
@@ -305,7 +355,7 @@ const App: React.FC = () => {
       }
       setIsImportModalOpen(true);
     },
-    []
+    [t]
   );
 
   const handleImportConfirm = useCallback((mode: 'replace' | 'merge') => {
@@ -365,10 +415,9 @@ const App: React.FC = () => {
         <div className="bg-blue-500/10 p-6 rounded-3xl mb-6 text-blue-400">
           <Monitor size={48} />
         </div>
-        <h1 className="text-2xl font-bold text-white mb-4">Bureau uniquement</h1>
+        <h1 className="text-2xl font-bold text-white mb-4">{t.desktopOnly}</h1>
         <p className="text-slate-400 max-w-xs leading-relaxed">
-          BodyLog est conçu pour le suivi anatomique 3D de haute précision et
-          n'est actuellement disponible que sur ordinateur.
+          {t.desktopOnlyDescription}
         </p>
       </div>
 
@@ -398,7 +447,7 @@ const App: React.FC = () => {
                   : "text-slate-400 hover:text-white"
               }`}
             >
-              <span className="text-sm font-medium">Male</span>
+              <span className="text-sm font-medium">{t.male}</span>
             </button>
             <button
               onClick={() => {
@@ -411,17 +460,31 @@ const App: React.FC = () => {
                   : "text-slate-400 hover:text-white"
               }`}
             >
-              <span className="text-sm font-medium">Female</span>
+              <span className="text-sm font-medium">{t.female}</span>
             </button>
           </div>
 
           <button
+            onClick={() => setWireframe((w) => !w)}
+            className={`bg-slate-800/80 backdrop-blur-md border border-slate-700 p-2.5 rounded-xl shadow-xl transition-all ${
+              wireframe
+                ? "text-blue-400 border-blue-500/50"
+                : "text-slate-400 hover:text-white"
+            }`}
+            title={wireframe ? t.solidMode : t.wireframeMode}
+          >
+            <Grid3x3 size={20} />
+          </button>
+
+          <button
             onClick={() => setIsHelpOpen(true)}
             className="bg-slate-800/80 backdrop-blur-md border border-slate-700 p-2.5 rounded-xl shadow-xl text-slate-400 hover:text-white transition-all"
-            title="Aide"
+            title={t.help}
           >
             <HelpCircle size={20} />
           </button>
+
+          <LanguageSwitcher />
 
           <input
             ref={fileInputRef}
@@ -444,7 +507,7 @@ const App: React.FC = () => {
                 ? "text-blue-400"
                 : "text-slate-400 hover:text-white"
             }`}
-            title={isSidebarOpen ? "Fermer le panneau" : "Ouvrir le panneau"}
+            title={isSidebarOpen ? t.closePanel : t.openPanel}
           >
             {isSidebarOpen ? (
               <PanelRightClose size={20} />
@@ -456,6 +519,7 @@ const App: React.FC = () => {
 
         <Viewer3D
           gender={gender}
+          wireframe={wireframe}
           markers={markers}
           selectedMarkerId={selectedMarkerId}
           onPointClick={handlePointClick}

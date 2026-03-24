@@ -1,5 +1,6 @@
 import React from 'react';
 import { X, Activity, MousePointerClick, Shield, BarChart3 } from 'lucide-react';
+import { useTranslation } from '../i18n';
 
 interface WelcomeModalProps {
   isOpen: boolean;
@@ -7,19 +8,20 @@ interface WelcomeModalProps {
 }
 
 export const WelcomeModal: React.FC<WelcomeModalProps> = ({ isOpen, onClose }) => {
+  const { t } = useTranslation();
   if (!isOpen) return null;
 
   return (
-    <div 
+    <div
       className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-slate-950/40 backdrop-blur-sm"
       onClick={onClose}
     >
-      <div 
+      <div
         className="bg-slate-900 border border-slate-800 rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden animate-in fade-in zoom-in duration-300"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="relative p-8 text-center">
-          <button 
+          <button
             onClick={onClose}
             className="absolute top-6 right-6 p-2 hover:bg-slate-800 rounded-full transition-colors text-slate-400 hover:text-white"
           >
@@ -32,8 +34,8 @@ export const WelcomeModal: React.FC<WelcomeModalProps> = ({ isOpen, onClose }) =
             </div>
           </div>
 
-          <h1 className="text-3xl font-bold text-white mb-2">Bienvenue sur BodyLog</h1>
-          <p className="text-slate-400 mb-8">Votre outil de suivi anatomique 3D personnel.</p>
+          <h1 className="text-3xl font-bold text-white mb-2">{t.welcomeTitle}</h1>
+          <p className="text-slate-400 mb-8">{t.welcomeSubtitle}</p>
 
           <div className="grid gap-6 text-left mb-10">
             <div className="flex items-start gap-4">
@@ -41,8 +43,8 @@ export const WelcomeModal: React.FC<WelcomeModalProps> = ({ isOpen, onClose }) =
                 <Shield size={20} />
               </div>
               <div>
-                <h3 className="font-semibold text-slate-200 text-sm">Suivi de précision</h3>
-                <p className="text-xs text-slate-400 leading-relaxed">Documentez les changements physiques, blessures ou progrès directement sur un modèle 3D haute fidélité.</p>
+                <h3 className="font-semibold text-slate-200 text-sm">{t.precisionTracking}</h3>
+                <p className="text-xs text-slate-400 leading-relaxed">{t.precisionTrackingDesc}</p>
               </div>
             </div>
 
@@ -51,8 +53,8 @@ export const WelcomeModal: React.FC<WelcomeModalProps> = ({ isOpen, onClose }) =
                 <BarChart3 size={20} />
               </div>
               <div>
-                <h3 className="font-semibold text-slate-200 text-sm">Historique visuel</h3>
-                <p className="text-xs text-slate-400 leading-relaxed">Conservez un historique chronologique des observations pour chaque point d'intérêt sur le corps.</p>
+                <h3 className="font-semibold text-slate-200 text-sm">{t.visualHistory}</h3>
+                <p className="text-xs text-slate-400 leading-relaxed">{t.visualHistoryDesc}</p>
               </div>
             </div>
 
@@ -61,9 +63,9 @@ export const WelcomeModal: React.FC<WelcomeModalProps> = ({ isOpen, onClose }) =
                 <MousePointerClick size={20} />
               </div>
               <div>
-                <h3 className="font-semibold text-blue-300 text-sm italic">Pour commencer</h3>
+                <h3 className="font-semibold text-blue-300 text-sm italic">{t.toGetStarted}</h3>
                 <p className="text-xs text-blue-200/70 leading-relaxed font-medium">
-                  Faites un <span className="text-blue-400 font-bold underline underline-offset-2">double clic</span> n'importe où sur le modèle 3D pour placer votre premier point.
+                  {t.toGetStartedDesc(t.doubleClick)}
                 </p>
               </div>
             </div>
@@ -73,7 +75,7 @@ export const WelcomeModal: React.FC<WelcomeModalProps> = ({ isOpen, onClose }) =
             onClick={onClose}
             className="w-full py-4 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-2xl transition-all shadow-lg shadow-blue-600/25 hover:scale-[1.02] active:scale-[0.98]"
           >
-            Commencer le suivi
+            {t.startTracking}
           </button>
         </div>
       </div>

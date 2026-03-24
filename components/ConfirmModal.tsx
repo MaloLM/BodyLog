@@ -1,5 +1,6 @@
 import React from 'react';
 import { AlertTriangle, X } from 'lucide-react';
+import { useTranslation } from '../i18n';
 
 interface ConfirmModalProps {
   isOpen: boolean;
@@ -16,6 +17,7 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
   onConfirm,
   onCancel,
 }) => {
+  const { t } = useTranslation();
   if (!isOpen) return null;
 
   return (
@@ -50,13 +52,13 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
             onClick={onCancel}
             className="flex-1 py-3 text-sm font-bold text-slate-400 hover:text-white transition-colors"
           >
-            Annuler
+            {t.cancel}
           </button>
           <button
             onClick={onConfirm}
             className="flex-[2] bg-red-600 hover:bg-red-500 py-3 rounded-xl text-sm font-bold text-white shadow-lg shadow-red-900/20 transition-all active:scale-95"
           >
-            Confirmer la suppression
+            {t.confirmDeletion}
           </button>
         </div>
       </div>

@@ -1,6 +1,7 @@
 
 import React from 'react';
 import { X, MousePointer2, ZoomIn, Rotate3d, MousePointerClick } from 'lucide-react';
+import { useTranslation } from '../i18n';
 
 interface HelpModalProps {
   isOpen: boolean;
@@ -8,29 +9,30 @@ interface HelpModalProps {
 }
 
 export const HelpModal: React.FC<HelpModalProps> = ({ isOpen, onClose }) => {
+  const { t } = useTranslation();
   if (!isOpen) return null;
 
   return (
-    <div 
+    <div
       className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm"
       onClick={onClose}
     >
-      <div 
+      <div
         className="bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in duration-200"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="p-6 border-b border-slate-800 flex justify-between items-center bg-slate-900/50">
           <h2 className="text-xl font-bold text-white flex items-center gap-2">
-            Comment utiliser BodyLog
+            {t.howToUse}
           </h2>
-          <button 
+          <button
             onClick={onClose}
             className="p-2 hover:bg-slate-800 rounded-full transition-colors text-slate-400 hover:text-white"
           >
             <X size={20} />
           </button>
         </div>
-        
+
         <div className="p-6 space-y-6">
           <div className="space-y-4">
             <div className="flex items-start gap-4">
@@ -38,8 +40,8 @@ export const HelpModal: React.FC<HelpModalProps> = ({ isOpen, onClose }) => {
                 <Rotate3d size={20} />
               </div>
               <div>
-                <h3 className="font-semibold text-slate-200">Rotation</h3>
-                <p className="text-sm text-slate-400">Cliquez et glissez avec le bouton gauche de la souris pour faire pivoter le modèle.</p>
+                <h3 className="font-semibold text-slate-200">{t.rotation}</h3>
+                <p className="text-sm text-slate-400">{t.rotationDesc}</p>
               </div>
             </div>
 
@@ -48,8 +50,8 @@ export const HelpModal: React.FC<HelpModalProps> = ({ isOpen, onClose }) => {
                 <ZoomIn size={20} />
               </div>
               <div>
-                <h3 className="font-semibold text-slate-200">Zoom</h3>
-                <p className="text-sm text-slate-400">Utilisez la molette de la souris pour zoomer et dézoomer sur le corps.</p>
+                <h3 className="font-semibold text-slate-200">{t.zoom}</h3>
+                <p className="text-sm text-slate-400">{t.zoomDesc}</p>
               </div>
             </div>
 
@@ -58,8 +60,8 @@ export const HelpModal: React.FC<HelpModalProps> = ({ isOpen, onClose }) => {
                 <MousePointerClick size={20} />
               </div>
               <div>
-                <h3 className="font-semibold text-slate-200">Placer un point</h3>
-                <p className="text-sm text-slate-400">Double-cliquez n'importe où sur le corps pour ajouter un nouveau point de suivi.</p>
+                <h3 className="font-semibold text-slate-200">{t.placePoint}</h3>
+                <p className="text-sm text-slate-400">{t.placePointDesc}</p>
               </div>
             </div>
 
@@ -68,17 +70,17 @@ export const HelpModal: React.FC<HelpModalProps> = ({ isOpen, onClose }) => {
                 <MousePointer2 size={20} />
               </div>
               <div>
-                <h3 className="font-semibold text-slate-200">Sélectionner / Désélectionner</h3>
-                <p className="text-sm text-slate-400">Cliquez sur un point existant pour voir ses détails ou le désélectionner.</p>
+                <h3 className="font-semibold text-slate-200">{t.selectDeselect}</h3>
+                <p className="text-sm text-slate-400">{t.selectDeselectDesc}</p>
               </div>
             </div>
           </div>
 
-          <button 
+          <button
             onClick={onClose}
             className="w-full py-3 bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-xl transition-all shadow-lg shadow-blue-600/20"
           >
-            Compris
+            {t.understood}
           </button>
         </div>
       </div>

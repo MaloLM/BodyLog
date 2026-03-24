@@ -1,5 +1,6 @@
 import React, { useEffect, useCallback } from 'react';
 import { X, ChevronLeft, ChevronRight, Image as ImageIcon } from 'lucide-react';
+import { useTranslation } from '../i18n';
 
 interface LightboxEntry {
   url?: string;
@@ -22,6 +23,7 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
   onPrev, 
   onNext 
 }) => {
+  const { t } = useTranslation();
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
     if (currentIndex === -1) return;
     if (e.key === 'ArrowLeft') onPrev();
@@ -82,7 +84,7 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
           ) : (
             <div className="flex flex-col items-center justify-center gap-4 text-slate-500 bg-slate-900/50 rounded-2xl p-20 border border-white/5 shadow-2xl animate-in zoom-in duration-300">
               <ImageIcon size={64} strokeWidth={1} />
-              <span className="text-sm font-medium uppercase tracking-[0.2em]">Aucune image</span>
+              <span className="text-sm font-medium uppercase tracking-[0.2em]">{t.noImageLightbox}</span>
             </div>
           )}
         </div>
@@ -98,7 +100,7 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
           </p>
           <div className="mt-4 flex justify-center">
             <span className="text-slate-500 font-bold bg-slate-800/50 px-3 py-1 rounded-full text-xs tracking-widest uppercase">
-              Entrée {currentIndex + 1} / {entries.length}
+              {t.entryOf(currentIndex + 1, entries.length)}
             </span>
           </div>
         </div>

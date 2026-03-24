@@ -11,6 +11,7 @@ import type {
 import { ENCRYPTED_SENTINEL } from "./archiveTypes";
 import { validateArchive } from "./archiveValidation";
 import { encryptBlob, isEncrypted, decryptBlob } from "./crypto";
+import type { Translations } from "../i18n";
 
 // --- Helpers ---
 
@@ -115,7 +116,8 @@ export async function exportArchive(
 
 export async function importArchive(
   file: File,
-  password?: string
+  password?: string,
+  t?: Translations
 ): Promise<
   | { success: true; result: ImportResult }
   | { success: false; errors: string[] }
@@ -139,11 +141,11 @@ export async function importArchive(
   } catch {
     return {
       success: false,
-      errors: ["Le fichier sélectionné n'est pas une archive ZIP valide"],
+      errors: [t?.invalidZipFile || "The selected file is not a valid ZIP archive"],
     };
   }
 
-  const validation = await validateArchive(zip);
+  const validation = await validateArchive(zip, t);
   if (validation.valid === false) {
     return { success: false, errors: validation.errors };
   }

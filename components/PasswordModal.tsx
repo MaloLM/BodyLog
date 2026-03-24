@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Lock, X } from "lucide-react";
+import { useTranslation } from "../i18n";
 
 interface PasswordModalProps {
   isOpen: boolean;
@@ -16,6 +17,7 @@ export const PasswordModal: React.FC<PasswordModalProps> = ({
   onCancel,
   error,
 }) => {
+  const { t } = useTranslation();
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
@@ -54,7 +56,7 @@ export const PasswordModal: React.FC<PasswordModalProps> = ({
               <Lock size={20} />
             </div>
             <h3 className="text-xl font-bold text-white">
-              {mode === "export" ? "Protéger l'export" : "Archive protégée"}
+              {mode === "export" ? t.protectExport : t.protectedArchive}
             </h3>
           </div>
           <button
@@ -69,8 +71,8 @@ export const PasswordModal: React.FC<PasswordModalProps> = ({
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
           <p className="text-slate-400 text-sm leading-relaxed">
             {mode === "export"
-              ? "Ajoutez un mot de passe optionnel pour chiffrer vos données."
-              : "Cette archive est protégée par un mot de passe."}
+              ? t.addPasswordDesc
+              : t.archiveProtectedDesc}
           </p>
 
           <input
@@ -78,7 +80,7 @@ export const PasswordModal: React.FC<PasswordModalProps> = ({
             type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            placeholder={mode === "export" ? "Mot de passe (optionnel)" : "Mot de passe"}
+            placeholder={mode === "export" ? t.passwordOptionalPlaceholder : t.passwordPlaceholder}
             className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 transition-colors"
           />
 
@@ -87,13 +89,13 @@ export const PasswordModal: React.FC<PasswordModalProps> = ({
               type="password"
               value={confirm}
               onChange={(e) => setConfirm(e.target.value)}
-              placeholder="Confirmer le mot de passe"
+              placeholder={t.confirmPassword}
               className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 transition-colors"
             />
           )}
 
           {mismatch && (
-            <p className="text-red-400 text-xs">Les mots de passe ne correspondent pas</p>
+            <p className="text-red-400 text-xs">{t.passwordMismatch}</p>
           )}
 
           {error && (
@@ -109,14 +111,14 @@ export const PasswordModal: React.FC<PasswordModalProps> = ({
                   onClick={() => onConfirm(null)}
                   className="flex-1 py-3 text-sm font-bold text-slate-400 hover:text-white transition-colors"
                 >
-                  Sans chiffrement
+                  {t.withoutEncryption}
                 </button>
                 <button
                   type="submit"
                   disabled={!canEncrypt}
                   className="flex-[2] bg-blue-600 hover:bg-blue-500 disabled:opacity-40 disabled:hover:bg-blue-600 py-3 rounded-xl text-sm font-bold text-white shadow-lg shadow-blue-900/20 transition-all active:scale-95"
                 >
-                  Chiffrer et exporter
+                  {t.encryptAndExport}
                 </button>
               </>
             ) : (
@@ -126,14 +128,14 @@ export const PasswordModal: React.FC<PasswordModalProps> = ({
                   onClick={onCancel}
                   className="flex-1 py-3 text-sm font-bold text-slate-400 hover:text-white transition-colors"
                 >
-                  Annuler
+                  {t.cancel}
                 </button>
                 <button
                   type="submit"
                   disabled={!canEncrypt}
                   className="flex-[2] bg-blue-600 hover:bg-blue-500 disabled:opacity-40 disabled:hover:bg-blue-600 py-3 rounded-xl text-sm font-bold text-white shadow-lg shadow-blue-900/20 transition-all active:scale-95"
                 >
-                  Déchiffrer
+                  {t.decrypt}
                 </button>
               </>
             )}

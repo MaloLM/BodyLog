@@ -64,7 +64,7 @@ export async function decryptBlob(
 
   const version = bytes[MAGIC_BYTES.length];
   if (version !== FORMAT_VERSION) {
-    throw new Error("Version de chiffrement non supportée");
+    throw new Error("Unsupported encryption version");
   }
 
   const salt = bytes.slice(MAGIC_BYTES.length + 1, MAGIC_BYTES.length + 1 + SALT_LENGTH);
@@ -76,6 +76,6 @@ export async function decryptBlob(
   try {
     return await crypto.subtle.decrypt({ name: "AES-GCM", iv }, key, ciphertext);
   } catch {
-    throw new Error("Mot de passe incorrect ou données corrompues");
+    throw new Error("Incorrect password or corrupted data");
   }
 }

@@ -1,7 +1,8 @@
 import JSZip from "jszip";
 import type { ArchiveManifest, ArchiveData, ValidationResult } from "./archiveTypes";
+import type { Translations } from "../i18n";
 
-export async function validateArchive(zip: JSZip): Promise<ValidationResult> {
+export async function validateArchive(zip: JSZip, t?: Translations): Promise<ValidationResult> {
   const errors: string[] = [];
   const warnings: string[] = [];
 
@@ -10,10 +11,10 @@ export async function validateArchive(zip: JSZip): Promise<ValidationResult> {
   const dataFile = zip.file("data.json");
 
   if (!manifestFile) {
-    errors.push("L'archive ne contient pas de fichier manifest.json");
+    errors.push(t?.archiveNoManifest || "Archive does not contain a manifest.json file");
   }
   if (!dataFile) {
-    errors.push("L'archive ne contient pas de fichier data.json");
+    errors.push(t?.archiveNoData || "Archive does not contain a data.json file");
   }
   if (errors.length > 0) {
     return { valid: false, errors };
@@ -26,37 +27,35 @@ export async function validateArchive(zip: JSZip): Promise<ValidationResult> {
   try {
     manifest = JSON.parse(await manifestFile!.async("text"));
   } catch {
-    return { valid: false, errors: ["manifest.json contient du JSON invalide"] };
+    return { valid: false, errors: [t?.manifestInvalidJson || "manifest.json contains invalid JSON"] };
   }
 
   try {
     data = JSON.parse(await dataFile!.async("text"));
   } catch {
-    return { valid: false, errors: ["data.json contient du JSON invalide"] };
+    return { valid: false, errors: [t?.dataInvalidJson || "data.json contains invalid JSON"] };
   }
 
   // 3. Validate manifest
   if (typeof manifest.formatVersion !== "number") {
-    errors.push("manifest.json: formatVersion manquant ou invalide");
+    errors.push(t?.manifestFormatVersionMissing || "manifest.json: formatVersion missing or invalid");
   } else if (manifest.formatVersion > 1) {
-    errors.push(
-      "Cette archive a été créée avec une version plus récente de BodyLog. Veuillez mettre à jour l'application."
-    );
+    errors.push(t?.manifestNewerVersion || "This archive was created with a newer version of BodyLog.");
   } else if (manifest.formatVersion !== 1) {
-    errors.push(`manifest.json: formatVersion non supporté (${manifest.formatVersion})`);
+    errors.push(t?.manifestFormatUnsupported(manifest.formatVersion) || `manifest.json: unsupported formatVersion (${manifest.formatVersion})`);
   }
 
   if (manifest.appName !== "BodyLog") {
-    errors.push("manifest.json: cette archive n'a pas été créée par BodyLog");
+    errors.push(t?.manifestNotBodyLog || "manifest.json: this archive was not created by BodyLog");
   }
 
   if (typeof manifest.exportedAt !== "string" || isNaN(Date.parse(manifest.exportedAt))) {
-    errors.push("manifest.json: exportedAt manquant ou invalide");
+    errors.push(t?.manifestExportedAtInvalid || "manifest.json: exportedAt missing or invalid");
   }
 
   for (const field of ["markerCount", "entryCount", "imageCount"] as const) {
     if (typeof manifest[field] !== "number" || !Number.isInteger(manifest[field]) || manifest[field] < 0) {
-      errors.push(`manifest.json: ${field} doit être un entier positif`);
+      errors.push(t?.manifestFieldPositiveInt(field) || `manifest.json: ${field} must be a positive integer`);
     }
   }
 
@@ -66,11 +65,11 @@ export async function validateArchive(zip: JSZip): Promise<ValidationResult> {
 
   // 4. Validate data structure
   if (data.gender !== "male" && data.gender !== "female") {
-    errors.push("data.json: gender doit être 'male' ou 'female'");
+    errors.push(t?.dataGenderInvalid || "data.json: gender must be 'male' or 'female'");
   }
 
   if (!Array.isArray(data.markers)) {
-    errors.push("data.json: markers doit être un tableau");
+    errors.push(t?.dataMarkersMustBeArray || "data.json: markers must be an array");
     return { valid: false, errors };
   }
 
@@ -82,23 +81,23 @@ export async function validateArchive(zip: JSZip): Promise<ValidationResult> {
     const prefix = `data.json: markers[${i}]`;
 
     if (typeof marker.id !== "string" || !marker.id) {
-      errors.push(`${prefix}.id manquant ou invalide`);
+      errors.push(t?.dataFieldMissing(prefix, "id") || `${prefix}.id missing or invalid`);
     }
     if (typeof marker.title !== "string" || !marker.title.trim()) {
-      errors.push(`${prefix}.title manquant ou vide`);
+      errors.push(t?.dataFieldEmpty(prefix, "title") || `${prefix}.title missing or empty`);
     }
     if (
       !Array.isArray(marker.position) ||
       marker.position.length !== 3 ||
       !marker.position.every((n) => typeof n === "number" && isFinite(n))
     ) {
-      errors.push(`${prefix}.position doit être un tableau de 3 nombres`);
+      errors.push(t?.dataPositionInvalid(prefix) || `${prefix}.position must be an array of 3 numbers`);
     }
     if (typeof marker.createdAt !== "string") {
-      errors.push(`${prefix}.createdAt manquant`);
+      errors.push(t?.dataFieldMissing(prefix, "createdAt") || `${prefix}.createdAt missing`);
     }
     if (!Array.isArray(marker.entries)) {
-      errors.push(`${prefix}.entries doit être un tableau`);
+      errors.push(t?.dataEntriesMustBeArray(prefix) || `${prefix}.entries must be an array`);
       continue;
     }
 
@@ -107,23 +106,23 @@ export async function validateArchive(zip: JSZip): Promise<ValidationResult> {
       const ePrefix = `${prefix}.entries[${j}]`;
 
       if (typeof entry.id !== "string" || !entry.id) {
-        errors.push(`${ePrefix}.id manquant ou invalide`);
+        errors.push(t?.dataFieldMissing(ePrefix, "id") || `${ePrefix}.id missing or invalid`);
       }
       if (typeof entry.date !== "string") {
-        errors.push(`${ePrefix}.date manquant`);
+        errors.push(t?.dataFieldMissing(ePrefix, "date") || `${ePrefix}.date missing`);
       }
       if (typeof entry.description !== "string") {
-        errors.push(`${ePrefix}.description manquant`);
+        errors.push(t?.dataFieldMissing(ePrefix, "description") || `${ePrefix}.description missing`);
       }
       if (entry.imageFile !== null && typeof entry.imageFile !== "string") {
-        errors.push(`${ePrefix}.imageFile doit être une chaîne ou null`);
+        errors.push(t?.dataImageFileMustBeStringOrNull(ePrefix) || `${ePrefix}.imageFile must be a string or null`);
       }
 
       // 5. Check image file exists in ZIP
       if (typeof entry.imageFile === "string") {
         totalImages++;
         if (!zip.file(entry.imageFile)) {
-          warnings.push(`Image manquante dans l'archive: ${entry.imageFile}`);
+          warnings.push(t?.imageMissingInArchive(entry.imageFile) || `Missing image in archive: ${entry.imageFile}`);
         }
       }
 
@@ -137,19 +136,13 @@ export async function validateArchive(zip: JSZip): Promise<ValidationResult> {
 
   // 6. Cross-check counts (warnings only)
   if (manifest.markerCount !== data.markers.length) {
-    warnings.push(
-      `Le manifest indique ${manifest.markerCount} markers mais l'archive en contient ${data.markers.length}`
-    );
+    warnings.push(t?.manifestCountMismatch("markers", manifest.markerCount, data.markers.length) || `Manifest indicates ${manifest.markerCount} markers but archive contains ${data.markers.length}`);
   }
   if (manifest.entryCount !== totalEntries) {
-    warnings.push(
-      `Le manifest indique ${manifest.entryCount} entries mais l'archive en contient ${totalEntries}`
-    );
+    warnings.push(t?.manifestCountMismatch("entries", manifest.entryCount, totalEntries) || `Manifest indicates ${manifest.entryCount} entries but archive contains ${totalEntries}`);
   }
   if (manifest.imageCount !== totalImages) {
-    warnings.push(
-      `Le manifest indique ${manifest.imageCount} images mais l'archive en contient ${totalImages}`
-    );
+    warnings.push(t?.manifestCountMismatch("images", manifest.imageCount, totalImages) || `Manifest indicates ${manifest.imageCount} images but archive contains ${totalImages}`);
   }
 
   return { valid: true, data, manifest, warnings };

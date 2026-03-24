@@ -8,11 +8,12 @@ import {
 } from "@react-three/drei";
 import { Marker } from "../types";
 import { HumanoidModel } from "./HumanoidModel";
-import { Grid3x3 } from "lucide-react";
+import { useTranslation } from "../i18n";
 import * as THREE from "three";
 
 interface Viewer3DProps {
   gender: "male" | "female";
+  wireframe: boolean;
   markers: Marker[];
   selectedMarkerId: string | null;
   onPointClick: (position: [number, number, number]) => void;
@@ -129,14 +130,16 @@ const CameraAnimator: React.FC<{
 
 export const Viewer3D: React.FC<Viewer3DProps> = ({
   gender,
+  wireframe,
   markers,
   selectedMarkerId,
   onPointClick,
   onMarkerSelect,
   isModalOpen,
 }) => {
+  const { t } = useTranslation();
   const [fps, setFps] = useState(0);
-  const [wireframe, setWireframe] = useState(false);
+  const [modelHeight, setModelHeight] = useState(2);
   const controlsRef = useRef<any>(null);
 
   const selectedMarkerPos = useMemo(() => {
@@ -149,13 +152,13 @@ export const Viewer3D: React.FC<Viewer3DProps> = ({
     <div className="w-full h-full cursor-crosshair relative overflow-hidden">
       <Canvas shadows onPointerMissed={() => onMarkerSelect(null)}>
         <color attach="background" args={["#1e293b"]} />
-        <PerspectiveCamera makeDefault position={[0, 1.5, 3.5]} fov={45} />
+        <PerspectiveCamera makeDefault position={[0, modelHeight * 0.75, 3.5]} fov={45} />
         <OrbitControls
           ref={controlsRef}
           enablePan={false}
           minDistance={1.5}
           maxDistance={6}
-          target={[0, 1, 0]}
+          target={[0, modelHeight / 2, 0]}
         />
 
         <Suspense fallback={null}>
@@ -190,6 +193,7 @@ export const Viewer3D: React.FC<Viewer3DProps> = ({
                 e.stopPropagation();
                 onMarkerSelect(null);
               }}
+              onBoundsComputed={setModelHeight}
             />
 
             {markers.map((marker) => (
@@ -211,26 +215,15 @@ export const Viewer3D: React.FC<Viewer3DProps> = ({
       {/* UI Overlay */}
       <div className="absolute bottom-6 left-6 flex items-end gap-3">
         <div className="text-slate-300 text-xs font-medium space-y-1 pointer-events-none">
-          <p>Clic gauche + glisser : Rotation</p>
-          <p>Molette : Zoom</p>
-          <p>Double clic sur le corps : Placer un point</p>
+          <p>{t.leftClickDrag}</p>
+          <p>{t.mouseWheel}</p>
+          <p>{t.doubleClickBody}</p>
         </div>
-        <button
-          onClick={() => setWireframe((w) => !w)}
-          className={`pointer-events-auto p-2 rounded-lg border transition-all ${
-            wireframe
-              ? "bg-blue-500/20 border-blue-500/50 text-blue-400"
-              : "bg-slate-900/40 border-white/5 text-slate-500 hover:text-slate-300"
-          }`}
-          title={wireframe ? "Mode solide" : "Mode fil de fer"}
-        >
-          <Grid3x3 size={16} />
-        </button>
       </div>
 
       <div className="absolute bottom-6 right-6 flex items-center gap-2 bg-slate-900/20 backdrop-blur-sm px-2 py-1 rounded-md border border-white/5 pointer-events-none">
         <span className="text-slate-500 uppercase tracking-widest text-[10px] font-bold">
-          Performance
+          {t.performance}
         </span>
         <span className="text-slate-300 font-mono text-xs">{fps} FPS</span>
       </div>
