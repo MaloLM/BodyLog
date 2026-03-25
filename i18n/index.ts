@@ -156,6 +156,8 @@ export interface Translations {
   // ImageLightbox.tsx
   noImageLightbox: string;
   entryOf: (current: number, total: number) => string;
+  reviewAll: string;
+  markerOf: (current: number, total: number) => string;
 
   // PRESET_TAGS
   presetTags: string[];

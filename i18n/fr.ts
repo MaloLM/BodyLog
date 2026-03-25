@@ -152,6 +152,8 @@ export const fr: Translations = {
   // ImageLightbox.tsx
   noImageLightbox: 'Aucune image',
   entryOf: (current: number, total: number) => `Entrée ${current} / ${total}`,
+  reviewAll: 'Voir tout',
+  markerOf: (current: number, total: number) => `Point ${current} / ${total}`,
 
   // PRESET_TAGS
   presetTags: ['blessure', 'inflammation', 'cicatrice', 'post-op', 'douleur chronique', 'suivi', 'autre'],

@@ -1,5 +1,5 @@
 import React, { useEffect, useCallback } from 'react';
-import { X, ChevronLeft, ChevronRight, Image as ImageIcon } from 'lucide-react';
+import { X, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, Image as ImageIcon } from 'lucide-react';
 import { useTranslation } from '../i18n';
 
 interface LightboxEntry {
@@ -14,22 +14,32 @@ interface ImageLightboxProps {
   onClose: () => void;
   onPrev: () => void;
   onNext: () => void;
+  markerTitle?: string;
+  markerPosition?: string;
+  onMarkerPrev?: () => void;
+  onMarkerNext?: () => void;
 }
 
-export const ImageLightbox: React.FC<ImageLightboxProps> = ({ 
-  entries, 
-  currentIndex, 
-  onClose, 
-  onPrev, 
-  onNext 
+export const ImageLightbox: React.FC<ImageLightboxProps> = ({
+  entries,
+  currentIndex,
+  onClose,
+  onPrev,
+  onNext,
+  markerTitle,
+  markerPosition,
+  onMarkerPrev,
+  onMarkerNext,
 }) => {
   const { t } = useTranslation();
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
     if (currentIndex === -1) return;
     if (e.key === 'ArrowLeft') onPrev();
     else if (e.key === 'ArrowRight') onNext();
+    else if (e.key === 'ArrowUp' && onMarkerPrev) { e.preventDefault(); onMarkerPrev(); }
+    else if (e.key === 'ArrowDown' && onMarkerNext) { e.preventDefault(); onMarkerNext(); }
     else if (e.key === 'Escape') onClose();
-  }, [currentIndex, onPrev, onNext, onClose]);
+  }, [currentIndex, onPrev, onNext, onClose, onMarkerPrev, onMarkerNext]);
 
   useEffect(() => {
     if (currentIndex === -1) return;
@@ -55,17 +65,34 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
 
       {entries.length > 1 && (
         <>
-          <button 
+          <button
             onClick={(e) => { e.stopPropagation(); onPrev(); }}
             className="absolute left-8 p-4 bg-slate-800/80 hover:bg-slate-700 rounded-full text-white transition-all z-[310] shadow-xl border border-white/10"
           >
             <ChevronLeft size={32} />
           </button>
-          <button 
+          <button
             onClick={(e) => { e.stopPropagation(); onNext(); }}
             className="absolute right-8 p-4 bg-slate-800/80 hover:bg-slate-700 rounded-full text-white transition-all z-[310] shadow-xl border border-white/10"
           >
             <ChevronRight size={32} />
+          </button>
+        </>
+      )}
+
+      {onMarkerPrev && onMarkerNext && (
+        <>
+          <button
+            onClick={(e) => { e.stopPropagation(); onMarkerPrev(); }}
+            className="absolute top-8 left-1/2 -translate-x-1/2 p-3 bg-slate-800/80 hover:bg-slate-700 rounded-full text-white transition-all z-[310] shadow-xl border border-white/10"
+          >
+            <ChevronUp size={28} />
+          </button>
+          <button
+            onClick={(e) => { e.stopPropagation(); onMarkerNext(); }}
+            className="absolute bottom-8 left-1/2 -translate-x-1/2 p-3 bg-slate-800/80 hover:bg-slate-700 rounded-full text-white transition-all z-[310] shadow-xl border border-white/10"
+          >
+            <ChevronDown size={28} />
           </button>
         </>
       )}
@@ -90,6 +117,14 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
         </div>
         
         <div className="w-full max-w-2xl bg-slate-900/80 backdrop-blur-md border border-white/10 p-6 rounded-2xl shadow-2xl animate-in slide-in-from-bottom-4 duration-500">
+          {markerTitle && (
+            <div className="flex flex-col items-center gap-1 mb-4">
+              <span className="text-white font-bold text-base tracking-wide">{markerTitle}</span>
+              {markerPosition && (
+                <span className="text-slate-500 font-bold text-xs uppercase tracking-widest">{markerPosition}</span>
+              )}
+            </div>
+          )}
           <div className="flex items-center gap-3 mb-3 justify-center">
             <span className="h-px w-8 bg-slate-700" />
             <span className="text-blue-400 font-bold text-xs uppercase tracking-widest">{currentEntry.date}</span>

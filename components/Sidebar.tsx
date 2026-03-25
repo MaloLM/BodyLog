@@ -54,6 +54,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onDuplicateMarker,
 }) => {
   const [lightboxIndex, setLightboxIndex] = useState(-1);
+  const [reviewAllMode, setReviewAllMode] = useState(false);
+  const [reviewMarkerIndex, setReviewMarkerIndex] = useState(0);
+  const [reviewEntryIndex, setReviewEntryIndex] = useState(0);
   const [searchQuery, setSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState<'recent' | 'alpha' | 'entries'>('recent');
   const [editingTitle, setEditingTitle] = useState<string | null>(null);
@@ -100,6 +103,22 @@ export const Sidebar: React.FC<SidebarProps> = ({
     }));
   }, [selectedMarker]);
 
+  const reviewableMarkers = useMemo(
+    () => markers.filter(m => m.entries.length > 0),
+    [markers]
+  );
+
+  const reviewEntries = useMemo(() => {
+    if (!reviewAllMode || reviewableMarkers.length === 0) return [];
+    const marker = reviewableMarkers[reviewMarkerIndex];
+    if (!marker) return [];
+    return marker.entries.map(e => ({
+      url: e.imageUrl,
+      description: e.description,
+      date: e.date,
+    }));
+  }, [reviewAllMode, reviewableMarkers, reviewMarkerIndex]);
+
   const handleEntryClick = (index: number) => {
     setLightboxIndex(index);
     onLightboxToggle?.(true);
@@ -108,6 +127,32 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const handleCloseLightbox = () => {
     setLightboxIndex(-1);
     onLightboxToggle?.(false);
+  };
+
+  const handleOpenReviewAll = () => {
+    setReviewAllMode(true);
+    setReviewMarkerIndex(0);
+    setReviewEntryIndex(0);
+    onLightboxToggle?.(true);
+  };
+
+  const handleCloseReviewAll = () => {
+    setReviewAllMode(false);
+    onLightboxToggle?.(false);
+  };
+
+  const handleReviewMarkerPrev = () => {
+    setReviewMarkerIndex(prev =>
+      prev > 0 ? prev - 1 : reviewableMarkers.length - 1
+    );
+    setReviewEntryIndex(0);
+  };
+
+  const handleReviewMarkerNext = () => {
+    setReviewMarkerIndex(prev =>
+      prev < reviewableMarkers.length - 1 ? prev + 1 : 0
+    );
+    setReviewEntryIndex(0);
   };
 
   return (
@@ -156,7 +201,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         </div>
       </div>
 
-      {!selectedMarker && <StatsBar markers={markers} />}
+      {!selectedMarker && <StatsBar markers={markers} onReviewAll={handleOpenReviewAll} />}
 
       <div className="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar">
         {selectedMarker ? (
@@ -500,21 +545,43 @@ export const Sidebar: React.FC<SidebarProps> = ({
         </a>
       </div>
 
-      <ImageLightbox
-        entries={timelineEntries}
-        currentIndex={lightboxIndex}
-        onClose={handleCloseLightbox}
-        onPrev={() =>
-          setLightboxIndex((prev) =>
-            prev > 0 ? prev - 1 : timelineEntries.length - 1
-          )
-        }
-        onNext={() =>
-          setLightboxIndex((prev) =>
-            prev < timelineEntries.length - 1 ? prev + 1 : 0
-          )
-        }
-      />
+      {reviewAllMode ? (
+        <ImageLightbox
+          entries={reviewEntries}
+          currentIndex={reviewEntryIndex}
+          onClose={handleCloseReviewAll}
+          onPrev={() =>
+            setReviewEntryIndex((prev) =>
+              prev > 0 ? prev - 1 : reviewEntries.length - 1
+            )
+          }
+          onNext={() =>
+            setReviewEntryIndex((prev) =>
+              prev < reviewEntries.length - 1 ? prev + 1 : 0
+            )
+          }
+          markerTitle={reviewableMarkers[reviewMarkerIndex]?.title}
+          markerPosition={t.markerOf(reviewMarkerIndex + 1, reviewableMarkers.length)}
+          onMarkerPrev={handleReviewMarkerPrev}
+          onMarkerNext={handleReviewMarkerNext}
+        />
+      ) : (
+        <ImageLightbox
+          entries={timelineEntries}
+          currentIndex={lightboxIndex}
+          onClose={handleCloseLightbox}
+          onPrev={() =>
+            setLightboxIndex((prev) =>
+              prev > 0 ? prev - 1 : timelineEntries.length - 1
+            )
+          }
+          onNext={() =>
+            setLightboxIndex((prev) =>
+              prev < timelineEntries.length - 1 ? prev + 1 : 0
+            )
+          }
+        />
+      )}
 
       <ConfirmModal
         isOpen={confirmConfig.isOpen}

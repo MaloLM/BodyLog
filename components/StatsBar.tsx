@@ -1,12 +1,14 @@
 import React, { useMemo } from 'react';
+import { Eye } from 'lucide-react';
 import { Marker } from '../types';
 import { useTranslation } from '../i18n';
 
 interface StatsBarProps {
   markers: Marker[];
+  onReviewAll?: () => void;
 }
 
-export const StatsBar: React.FC<StatsBarProps> = ({ markers }) => {
+export const StatsBar: React.FC<StatsBarProps> = ({ markers, onReviewAll }) => {
   const { t } = useTranslation();
   const stats = useMemo(() => {
     let totalEntries = 0;
@@ -38,6 +40,15 @@ export const StatsBar: React.FC<StatsBarProps> = ({ markers }) => {
           <span className="text-slate-600">|</span>
           <span className="text-slate-400">{t.imageCount(stats.totalImages)}</span>
         </div>
+        {onReviewAll && stats.totalEntries > 0 && (
+          <button
+            onClick={onReviewAll}
+            className="text-xs text-blue-400 hover:text-blue-300 font-medium transition-colors flex items-center gap-1"
+          >
+            <Eye size={14} />
+            {t.reviewAll}
+          </button>
+        )}
       </div>
 
       <div className="flex items-center gap-2">
