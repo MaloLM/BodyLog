@@ -27,8 +27,8 @@ import {
 export type SkinMode = 'mesh' | 'wireframe' | 'light' | 'medium' | 'dark' | 'ebony';
 
 const SKIN_OPTIONS: { key: SkinMode; color: string; isWireframe?: boolean }[] = [
-  { key: 'mesh', color: '#334155' },
   { key: 'wireframe', color: '#64748b', isWireframe: true },
+  { key: 'mesh', color: '#334155' },
   { key: 'light', color: '#FFDBAC' },
   { key: 'medium', color: '#C68642' },
   { key: 'dark', color: '#8D5524' },
