@@ -9,22 +9,16 @@ interface StatsBarProps {
 export const StatsBar: React.FC<StatsBarProps> = ({ markers }) => {
   const { t } = useTranslation();
   const stats = useMemo(() => {
-    const totalEntries = markers.reduce((sum, m) => sum + m.entries.length, 0);
-    const totalImages = markers.reduce(
-      (sum, m) => sum + m.entries.filter((e) => e.imageUrl).length,
-      0
-    );
-
-    const statusCounts = { active: 0, monitoring: 0, resolved: 0 };
-    for (const m of markers) {
-      const s = m.status || 'active';
-      statusCounts[s]++;
-    }
-
-    // Find most recent entry date
+    let totalEntries = 0;
+    let totalImages = 0;
     let lastActivity = '';
+    const statusCounts = { active: 0, monitoring: 0, resolved: 0 };
+
     for (const m of markers) {
+      statusCounts[m.status || 'active']++;
       for (const e of m.entries) {
+        totalEntries++;
+        if (e.imageUrl) totalImages++;
         if (!lastActivity || e.date > lastActivity) lastActivity = e.date;
       }
     }

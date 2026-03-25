@@ -20,6 +20,7 @@ import { StatsBar } from "./StatsBar";
 
 import { Entry, Marker } from "../types";
 import { useTranslation } from "../i18n";
+import { getPainColorHex } from "../utils/painColor";
 
 interface SidebarProps {
   markers: Marker[];
@@ -269,7 +270,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                               className="w-2 h-4 rounded-sm"
                               style={{
                                 backgroundColor: i < entry.painLevel!
-                                  ? entry.painLevel! <= 3 ? '#22c55e' : entry.painLevel! <= 6 ? '#eab308' : '#ef4444'
+                                  ? getPainColorHex(entry.painLevel!)
                                   : '#1e293b',
                               }}
                             />
@@ -277,7 +278,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                         </div>
                         <span
                           className="text-xs font-bold"
-                          style={{ color: entry.painLevel <= 3 ? '#22c55e' : entry.painLevel <= 6 ? '#eab308' : '#ef4444' }}
+                          style={{ color: getPainColorHex(entry.painLevel) }}
                         >
                           {entry.painLevel}/10
                         </span>

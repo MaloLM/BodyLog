@@ -1,18 +1,7 @@
 import { jsPDF } from "jspdf";
 import type { Marker, Gender } from "../types";
 import type { Translations } from "../i18n";
-
-const PAIN_COLORS: Record<string, [number, number, number]> = {
-  low: [34, 197, 94],
-  mid: [234, 179, 8],
-  high: [239, 68, 68],
-};
-
-function getPainColor(level: number): [number, number, number] {
-  if (level <= 3) return PAIN_COLORS.low;
-  if (level <= 6) return PAIN_COLORS.mid;
-  return PAIN_COLORS.high;
-}
+import { getPainColorRGB } from "./painColor";
 
 export async function exportPDF(
   markers: Marker[],
@@ -104,7 +93,7 @@ export async function exportPDF(
 
       // Pain level
       if (entry.painLevel != null) {
-        const color = getPainColor(entry.painLevel);
+        const color = getPainColorRGB(entry.painLevel);
         doc.setTextColor(color[0], color[1], color[2]);
         doc.setFontSize(8);
         doc.text(t.pdfPain(entry.painLevel), margin + 2, y);

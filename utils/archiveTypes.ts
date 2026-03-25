@@ -1,5 +1,5 @@
 import { Gender, Marker } from "../types";
-import type { SkinMode } from "../App";
+import type { SkinMode } from "../types";
 import type { Language } from "../i18n";
 
 export interface ArchiveManifest {

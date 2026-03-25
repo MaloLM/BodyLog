@@ -7,8 +7,12 @@ import { WelcomeModal } from "./components/WelcomeModal";
 import { ImportModal } from "./components/ImportModal";
 import { PasswordModal } from "./components/PasswordModal";
 import { LeaveWarningModal } from "./components/LeaveWarningModal";
-import { Marker, Gender, Entry } from "./types";
+import { LanguageSwitcher } from "./components/LanguageSwitcher";
+import { Marker, Gender, Entry, SkinMode, SKIN_OPTIONS } from "./types";
 import { exportArchive, importArchive } from "./utils/archive";
+import { useLocalStorage, useLocalStorageBoolean } from "./utils/useLocalStorage";
+import { useClickOutside } from "./utils/useClickOutside";
+import { useKeyboardShortcuts } from "./utils/useKeyboardShortcuts";
 import { exportPDF } from "./utils/pdfExport";
 import type { ArchiveManifest } from "./utils/archiveTypes";
 import { ENCRYPTED_SENTINEL } from "./utils/archiveTypes";
@@ -19,66 +23,9 @@ import {
   PanelRightClose,
   PanelRightOpen,
   Monitor,
-  ChevronDown,
   Grid3x3,
   Palette,
 } from "lucide-react";
-
-export type SkinMode = 'mesh' | 'wireframe' | 'light' | 'medium' | 'dark' | 'ebony';
-
-const SKIN_OPTIONS: { key: SkinMode; color: string; isWireframe?: boolean }[] = [
-  { key: 'wireframe', color: '#64748b', isWireframe: true },
-  { key: 'mesh', color: '#334155' },
-  { key: 'light', color: '#FFDBAC' },
-  { key: 'medium', color: '#C68642' },
-  { key: 'dark', color: '#8D5524' },
-  { key: 'ebony', color: '#4A2912' },
-];
-
-const LanguageSwitcher: React.FC = () => {
-  const { language, setLanguage } = useTranslation();
-  const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const handler = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
-    };
-    document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
-  }, []);
-
-  const flags: Record<Language, string> = { en: '🇬🇧', fr: '🇫🇷' };
-  const labels: Record<Language, string> = { en: 'English', fr: 'Français' };
-
-  return (
-    <div ref={ref} className="relative flex">
-      <button
-        onClick={() => setOpen(!open)}
-        className="bg-slate-800/80 backdrop-blur-md border border-slate-700 px-3 rounded-xl shadow-xl text-sm flex items-center gap-1.5 hover:border-slate-600 transition-all"
-      >
-        <span className="text-base leading-none">{flags[language]}</span>
-        <ChevronDown size={14} className={`text-slate-400 transition-transform ${open ? 'rotate-180' : ''}`} />
-      </button>
-      {open && (
-        <div className="absolute top-full mt-1 right-0 bg-slate-800 border border-slate-700 rounded-xl shadow-2xl overflow-hidden z-50 min-w-[140px]">
-          {(Object.keys(flags) as Language[]).map((lang) => (
-            <button
-              key={lang}
-              onClick={() => { setLanguage(lang); setOpen(false); }}
-              className={`w-full px-4 py-2.5 text-sm flex items-center gap-2.5 transition-colors ${
-                language === lang ? 'bg-blue-600/20 text-blue-400' : 'text-slate-300 hover:bg-slate-700'
-              }`}
-            >
-              <span className="text-base leading-none">{flags[lang]}</span>
-              {labels[lang]}
-            </button>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-};
 
 // Robust ID generator to prevent crashes in non-secure contexts
 const generateId = () => {
@@ -92,20 +39,11 @@ const App: React.FC = () => {
   const { t, language, setLanguage } = useTranslation();
   const [markers, setMarkers] = useState<Marker[]>([]);
   const [selectedMarkerId, setSelectedMarkerId] = useState<string | null>(null);
-  const [gender, setGender] = useState<Gender>(() => {
-    const saved = localStorage.getItem("bodylog_gender");
-    return (saved as Gender) || "male";
-  });
-  const [skinMode, setSkinMode] = useState<SkinMode>(() => {
-    const saved = localStorage.getItem("bodylog_skin_mode");
-    return (saved as SkinMode) || "mesh";
-  });
+  const [gender, setGender] = useLocalStorage<Gender>("bodylog_gender", "male");
+  const [skinMode, setSkinMode] = useLocalStorage<SkinMode>("bodylog_skin_mode", "mesh");
   const [isSkinPopoverOpen, setIsSkinPopoverOpen] = useState(false);
   const skinPopoverRef = useRef<HTMLDivElement>(null);
-  const [isSidebarOpen, setIsSidebarOpen] = useState(() => {
-    const saved = localStorage.getItem("bodylog_sidebar_open");
-    return saved !== null ? saved === "true" : true;
-  });
+  const [isSidebarOpen, setIsSidebarOpen] = useLocalStorageBoolean("bodylog_sidebar_open", true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isHelpOpen, setIsHelpOpen] = useState(false);
   const [isWelcomeOpen, setIsWelcomeOpen] = useState(() => {
@@ -393,10 +331,8 @@ const App: React.FC = () => {
       } else {
         setMarkers(pendingImport.markers);
         setGender(pendingImport.gender);
-        localStorage.setItem("bodylog_gender", pendingImport.gender);
         if (pendingImport.skinMode) {
           setSkinMode(pendingImport.skinMode);
-          localStorage.setItem("bodylog_skin_mode", pendingImport.skinMode);
         }
         if (pendingImport.language) {
           setLanguage(pendingImport.language);
@@ -414,15 +350,7 @@ const App: React.FC = () => {
   }, []);
 
   // Close skin popover on click outside
-  useEffect(() => {
-    const handler = (e: MouseEvent) => {
-      if (skinPopoverRef.current && !skinPopoverRef.current.contains(e.target as Node)) {
-        setIsSkinPopoverOpen(false);
-      }
-    };
-    document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
-  }, []);
+  useClickOutside(skinPopoverRef, useCallback(() => setIsSkinPopoverOpen(false), []));
 
   // Warn before leaving / refreshing when there is data
   useEffect(() => {
@@ -436,42 +364,25 @@ const App: React.FC = () => {
   }, [markers.length > 0]);
 
   // Global keyboard shortcuts
-  useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
-      // Intercept refresh shortcuts to show custom modal
-      if (markers.length > 0 && (
-        e.key === 'F5' ||
-        ((e.metaKey || e.ctrlKey) && e.key === 'r')
-      )) {
-        e.preventDefault();
-        leaveActionRef.current = () => window.location.reload();
-        setIsLeaveWarningOpen(true);
-        return;
-      }
-
-      const tag = (e.target as HTMLElement)?.tagName;
-      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
-
-      if ((e.metaKey || e.ctrlKey) && e.key === 'z' && !e.shiftKey) {
-        e.preventDefault();
-        handleUndo();
-      } else if ((e.metaKey || e.ctrlKey) && e.key === 'z' && e.shiftKey) {
-        e.preventDefault();
-        handleRedo();
-      } else if (e.key === 'Escape') {
-        if (isLeaveWarningOpen) setIsLeaveWarningOpen(false);
-        else if (isPasswordModalOpen) handlePasswordCancel();
-        else if (isImportModalOpen) handleImportClose();
-        else if (isHelpOpen) setIsHelpOpen(false);
-        else if (isModalOpen) { setIsModalOpen(false); setEditingEntry(null); }
-        else if (selectedMarkerId) setSelectedMarkerId(null);
-      } else if (e.key === '?') {
-        setIsHelpOpen(true);
-      }
-    };
-    window.addEventListener('keydown', handler);
-    return () => window.removeEventListener('keydown', handler);
-  }, [handleUndo, handleRedo, isPasswordModalOpen, handlePasswordCancel, isImportModalOpen, handleImportClose, isHelpOpen, isModalOpen, isLeaveWarningOpen, selectedMarkerId, markers.length]);
+  useKeyboardShortcuts({
+    markers,
+    leaveActionRef,
+    setIsLeaveWarningOpen,
+    handleUndo,
+    handleRedo,
+    isLeaveWarningOpen,
+    isPasswordModalOpen,
+    handlePasswordCancel,
+    isImportModalOpen,
+    handleImportClose,
+    isHelpOpen,
+    setIsHelpOpen,
+    isModalOpen,
+    setIsModalOpen,
+    setEditingEntry,
+    selectedMarkerId,
+    setSelectedMarkerId,
+  });
 
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-slate-950 text-slate-100">
@@ -504,10 +415,7 @@ const App: React.FC = () => {
         <div className="absolute top-6 right-6 z-10 flex items-stretch gap-4">
           <div className="bg-slate-800/80 backdrop-blur-md border border-slate-700 p-1 rounded-xl shadow-xl flex">
             <button
-              onClick={() => {
-                setGender("male");
-                localStorage.setItem("bodylog_gender", "male");
-              }}
+              onClick={() => setGender("male")}
               className={`px-4 py-2 rounded-lg flex items-center transition-all ${
                 gender === "male"
                   ? "bg-blue-600 text-white shadow-lg"
@@ -517,10 +425,7 @@ const App: React.FC = () => {
               <span className="text-sm font-medium">{t.male}</span>
             </button>
             <button
-              onClick={() => {
-                setGender("female");
-                localStorage.setItem("bodylog_gender", "female");
-              }}
+              onClick={() => setGender("female")}
               className={`px-4 py-2 rounded-lg flex items-center transition-all ${
                 gender === "female"
                   ? "bg-blue-600 text-white shadow-lg"
@@ -550,7 +455,6 @@ const App: React.FC = () => {
                     key={opt.key}
                     onClick={() => {
                       setSkinMode(opt.key);
-                      localStorage.setItem("bodylog_skin_mode", opt.key);
                       setIsSkinPopoverOpen(false);
                     }}
                     className={`relative w-8 h-8 rounded-full border-2 transition-all flex items-center justify-center ${
@@ -581,11 +485,7 @@ const App: React.FC = () => {
           <LanguageSwitcher />
 
           <button
-            onClick={() => {
-              const newState = !isSidebarOpen;
-              setIsSidebarOpen(newState);
-              localStorage.setItem("bodylog_sidebar_open", String(newState));
-            }}
+            onClick={() => setIsSidebarOpen(!isSidebarOpen)}
             className={`bg-slate-800/80 backdrop-blur-md border border-slate-700 p-2.5 rounded-xl shadow-xl transition-all flex items-center ${
               isSidebarOpen
                 ? "text-blue-400"

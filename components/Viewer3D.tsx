@@ -1,5 +1,5 @@
 import React, { Suspense, useState, useRef, useEffect, useMemo } from "react";
-import { Canvas, useFrame, useThree } from "@react-three/fiber";
+import { Canvas, useFrame } from "@react-three/fiber";
 import {
   OrbitControls,
   Environment,
@@ -11,7 +11,7 @@ import { HumanoidModel } from "./HumanoidModel";
 import { useTranslation } from "../i18n";
 import * as THREE from "three";
 
-import type { SkinMode } from "../App";
+import type { SkinMode } from "../types";
 
 interface Viewer3DProps {
   gender: "male" | "female";
@@ -47,17 +47,16 @@ const MarkerPoint: React.FC<{
   isSelected: boolean;
   onSelect: (id: string | null) => void;
   isModalOpen: boolean;
-}> = ({ marker, isSelected, onSelect, isModalOpen }) => {
+}> = React.memo(({ marker, isSelected, onSelect, isModalOpen }) => {
   const meshRef = useRef<THREE.Mesh>(null);
   const [hovered, setHovered] = useState(false);
 
   useFrame((state) => {
     if (meshRef.current) {
-      const scale = isSelected ? 1 : 1;
       const pulse = isSelected
         ? Math.sin(state.clock.elapsedTime * 4) * 0.2 + 1
         : 1;
-      meshRef.current.scale.setScalar(scale * pulse);
+      meshRef.current.scale.setScalar(pulse);
     }
   });
 
@@ -100,7 +99,13 @@ const MarkerPoint: React.FC<{
       )}
     </group>
   );
-};
+}, (prev, next) =>
+  prev.marker.id === next.marker.id &&
+  prev.marker.title === next.marker.title &&
+  prev.marker.position === next.marker.position &&
+  prev.isSelected === next.isSelected &&
+  prev.isModalOpen === next.isModalOpen
+);
 
 const CameraAnimator: React.FC<{
   targetPosition: [number, number, number] | null;
