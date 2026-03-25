@@ -202,6 +202,14 @@ export interface Translations {
   // crypto.ts
   encryptionVersionUnsupported: string;
   wrongPasswordOrCorrupted: string;
+
+  // LeaveWarningModal.tsx
+  leaveWarningTitle: string;
+  leaveWarningMessage: string;
+  leaveWarningExportHint: string;
+  leaveWarningExport: string;
+  leaveWarningStay: string;
+  leaveWarningLeave: string;
 }
 
 const translations = { en, fr } as const;

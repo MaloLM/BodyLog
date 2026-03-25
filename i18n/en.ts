@@ -201,4 +201,12 @@ export const en: Translations = {
   // crypto.ts
   encryptionVersionUnsupported: 'Unsupported encryption version',
   wrongPasswordOrCorrupted: 'Incorrect password or corrupted data',
+
+  // LeaveWarningModal.tsx
+  leaveWarningTitle: 'Unsaved data',
+  leaveWarningMessage: 'Your tracking data is stored locally and will be lost if you leave or refresh the page.',
+  leaveWarningExportHint: 'Export your session first to avoid losing your work.',
+  leaveWarningExport: 'Export my data',
+  leaveWarningStay: 'Stay on page',
+  leaveWarningLeave: 'Leave anyway',
 };

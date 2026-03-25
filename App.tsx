@@ -6,6 +6,7 @@ import { HelpModal } from "./components/HelpModal";
 import { WelcomeModal } from "./components/WelcomeModal";
 import { ImportModal } from "./components/ImportModal";
 import { PasswordModal } from "./components/PasswordModal";
+import { LeaveWarningModal } from "./components/LeaveWarningModal";
 import { Marker, Gender, Entry } from "./types";
 import { exportArchive, importArchive } from "./utils/archive";
 import { exportPDF } from "./utils/pdfExport";
@@ -51,10 +52,10 @@ const LanguageSwitcher: React.FC = () => {
   const labels: Record<Language, string> = { en: 'English', fr: 'Français' };
 
   return (
-    <div ref={ref} className="relative">
+    <div ref={ref} className="relative flex">
       <button
         onClick={() => setOpen(!open)}
-        className="bg-slate-800/80 backdrop-blur-md border border-slate-700 px-3 py-2.5 rounded-xl shadow-xl text-sm flex items-center gap-1.5 hover:border-slate-600 transition-all"
+        className="bg-slate-800/80 backdrop-blur-md border border-slate-700 px-3 rounded-xl shadow-xl text-sm flex items-center gap-1.5 hover:border-slate-600 transition-all"
       >
         <span className="text-base leading-none">{flags[language]}</span>
         <ChevronDown size={14} className={`text-slate-400 transition-transform ${open ? 'rotate-180' : ''}`} />
@@ -133,6 +134,8 @@ const App: React.FC = () => {
   const [passwordMode, setPasswordMode] = useState<"export" | "import">("export");
   const [passwordError, setPasswordError] = useState("");
   const [pendingFile, setPendingFile] = useState<File | null>(null);
+  const [isLeaveWarningOpen, setIsLeaveWarningOpen] = useState(false);
+  const leaveActionRef = useRef<(() => void) | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const selectedMarker = useMemo(
@@ -421,9 +424,31 @@ const App: React.FC = () => {
     return () => document.removeEventListener('mousedown', handler);
   }, []);
 
+  // Warn before leaving / refreshing when there is data
+  useEffect(() => {
+    if (markers.length === 0) return;
+    const handler = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = '';
+    };
+    window.addEventListener('beforeunload', handler);
+    return () => window.removeEventListener('beforeunload', handler);
+  }, [markers.length > 0]);
+
   // Global keyboard shortcuts
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
+      // Intercept refresh shortcuts to show custom modal
+      if (markers.length > 0 && (
+        e.key === 'F5' ||
+        ((e.metaKey || e.ctrlKey) && e.key === 'r')
+      )) {
+        e.preventDefault();
+        leaveActionRef.current = () => window.location.reload();
+        setIsLeaveWarningOpen(true);
+        return;
+      }
+
       const tag = (e.target as HTMLElement)?.tagName;
       if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
 
@@ -434,7 +459,8 @@ const App: React.FC = () => {
         e.preventDefault();
         handleRedo();
       } else if (e.key === 'Escape') {
-        if (isPasswordModalOpen) handlePasswordCancel();
+        if (isLeaveWarningOpen) setIsLeaveWarningOpen(false);
+        else if (isPasswordModalOpen) handlePasswordCancel();
         else if (isImportModalOpen) handleImportClose();
         else if (isHelpOpen) setIsHelpOpen(false);
         else if (isModalOpen) { setIsModalOpen(false); setEditingEntry(null); }
@@ -445,7 +471,7 @@ const App: React.FC = () => {
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [handleUndo, handleRedo, isPasswordModalOpen, handlePasswordCancel, isImportModalOpen, handleImportClose, isHelpOpen, isModalOpen, selectedMarkerId]);
+  }, [handleUndo, handleRedo, isPasswordModalOpen, handlePasswordCancel, isImportModalOpen, handleImportClose, isHelpOpen, isModalOpen, isLeaveWarningOpen, selectedMarkerId, markers.length]);
 
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-slate-950 text-slate-100">
@@ -466,14 +492,16 @@ const App: React.FC = () => {
           isSidebarOpen ? "w-[65%]" : "w-full"
         }`}
       >
-        <div className="absolute top-6 left-6 z-10 flex items-center gap-4">
+        <div className="absolute top-6 left-6 z-10">
           <div className="bg-slate-800/80 backdrop-blur-md border border-slate-700 px-4 py-2 rounded-xl shadow-xl flex items-center gap-2 text-blue-400">
             <Activity size={18} />
             <span className="text-sm font-bold tracking-widest text-white">
               BodyLog
             </span>
           </div>
+        </div>
 
+        <div className="absolute top-6 right-6 z-10 flex items-stretch gap-4">
           <div className="bg-slate-800/80 backdrop-blur-md border border-slate-700 p-1 rounded-xl shadow-xl flex">
             <button
               onClick={() => {
@@ -503,10 +531,10 @@ const App: React.FC = () => {
             </button>
           </div>
 
-          <div ref={skinPopoverRef} className="relative">
+          <div ref={skinPopoverRef} className="relative flex">
             <button
               onClick={() => setIsSkinPopoverOpen((o) => !o)}
-              className={`bg-slate-800/80 backdrop-blur-md border border-slate-700 p-2.5 rounded-xl shadow-xl transition-all ${
+              className={`bg-slate-800/80 backdrop-blur-md border border-slate-700 p-2.5 rounded-xl shadow-xl transition-all flex items-center ${
                 isSkinPopoverOpen
                   ? "text-blue-400 border-blue-500/50"
                   : "text-slate-400 hover:text-white"
@@ -516,7 +544,7 @@ const App: React.FC = () => {
               <Palette size={20} />
             </button>
             {isSkinPopoverOpen && (
-              <div className="absolute top-full mt-2 left-1/2 -translate-x-1/2 bg-slate-800 border border-slate-700 rounded-xl shadow-2xl p-3 z-50 flex items-center gap-2">
+              <div className="absolute top-full mt-2 right-0 bg-slate-800 border border-slate-700 rounded-xl shadow-2xl p-3 z-50 flex items-center gap-2">
                 {SKIN_OPTIONS.map((opt) => (
                   <button
                     key={opt.key}
@@ -544,7 +572,7 @@ const App: React.FC = () => {
 
           <button
             onClick={() => setIsHelpOpen(true)}
-            className="bg-slate-800/80 backdrop-blur-md border border-slate-700 p-2.5 rounded-xl shadow-xl text-slate-400 hover:text-white transition-all"
+            className="bg-slate-800/80 backdrop-blur-md border border-slate-700 p-2.5 rounded-xl shadow-xl text-slate-400 hover:text-white transition-all flex items-center"
             title={t.help}
           >
             <HelpCircle size={20} />
@@ -552,23 +580,13 @@ const App: React.FC = () => {
 
           <LanguageSwitcher />
 
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept=".bodylog,.zip"
-            onChange={handleFileSelect}
-            hidden
-          />
-        </div>
-
-        <div className="absolute top-6 right-6 z-10">
           <button
             onClick={() => {
               const newState = !isSidebarOpen;
               setIsSidebarOpen(newState);
               localStorage.setItem("bodylog_sidebar_open", String(newState));
             }}
-            className={`bg-slate-800/80 backdrop-blur-md border border-slate-700 p-2.5 rounded-xl shadow-xl transition-all ${
+            className={`bg-slate-800/80 backdrop-blur-md border border-slate-700 p-2.5 rounded-xl shadow-xl transition-all flex items-center ${
               isSidebarOpen
                 ? "text-blue-400"
                 : "text-slate-400 hover:text-white"
@@ -581,6 +599,14 @@ const App: React.FC = () => {
               <PanelRightOpen size={20} />
             )}
           </button>
+
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".bodylog,.zip"
+            onChange={handleFileSelect}
+            hidden
+          />
         </div>
 
         <Viewer3D
@@ -591,7 +617,7 @@ const App: React.FC = () => {
           onPointClick={handlePointClick}
           onMarkerSelect={setSelectedMarkerId}
           isModalOpen={
-            isModalOpen || isHelpOpen || isWelcomeOpen || isLightboxOpen || isImportModalOpen || isPasswordModalOpen
+            isModalOpen || isHelpOpen || isWelcomeOpen || isLightboxOpen || isImportModalOpen || isPasswordModalOpen || isLeaveWarningOpen
           }
         />
       </div>
@@ -668,6 +694,25 @@ const App: React.FC = () => {
         onConfirm={handlePasswordConfirm}
         onCancel={handlePasswordCancel}
         error={passwordError}
+      />
+
+      {/* Leave Warning Modal */}
+      <LeaveWarningModal
+        isOpen={isLeaveWarningOpen}
+        onStay={() => {
+          setIsLeaveWarningOpen(false);
+          leaveActionRef.current = null;
+        }}
+        onExport={() => {
+          setIsLeaveWarningOpen(false);
+          leaveActionRef.current = null;
+          handleExport();
+        }}
+        onLeave={() => {
+          setIsLeaveWarningOpen(false);
+          leaveActionRef.current?.();
+          leaveActionRef.current = null;
+        }}
       />
     </div>
   );

@@ -201,4 +201,12 @@ export const fr: Translations = {
   // crypto.ts
   encryptionVersionUnsupported: 'Version de chiffrement non supportée',
   wrongPasswordOrCorrupted: 'Mot de passe incorrect ou données corrompues',
+
+  // LeaveWarningModal.tsx
+  leaveWarningTitle: 'Données non sauvegardées',
+  leaveWarningMessage: 'Vos données de suivi sont stockées localement et seront perdues si vous quittez ou rafraîchissez la page.',
+  leaveWarningExportHint: 'Exportez votre session pour ne pas perdre votre travail.',
+  leaveWarningExport: 'Exporter mes données',
+  leaveWarningStay: 'Rester sur la page',
+  leaveWarningLeave: 'Quitter quand même',
 };
