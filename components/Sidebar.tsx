@@ -422,6 +422,15 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     ? t.tryAnotherSearch
                     : t.doubleClickToStart}
                 </p>
+                {!searchQuery && markers.length === 0 && (
+                  <button
+                    onClick={onImport}
+                    className="mt-4 flex items-center gap-2 text-sm text-blue-400 hover:text-blue-300 font-medium transition-colors opacity-100"
+                  >
+                    <Upload size={16} />
+                    {t.importSession}
+                  </button>
+                )}
               </div>
             ) : (
               filteredMarkers.map((marker) => {
